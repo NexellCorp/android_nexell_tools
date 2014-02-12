@@ -188,7 +188,7 @@ function flash()
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        local secondboot_file=${TOP}/hardware/nexell/pyrope/boot/pyrope_2ndboot_SPI_Pyxis.bin
+        local secondboot_file=${TOP}/hardware/nexell/pyrope/boot/pyrope_2ndboot_SPI.bin
         if [ ! -f ${secondboot_file} ]; then
             local input=
             read -p "enter your secondboot file in hardware/nexell/pyrope/boot directory: " input
@@ -204,7 +204,7 @@ function update_2ndboot()
             fi
         fi
 
-        local nsih_file=${TOP}/hardware/nexell/pyrope/boot/NSIH.txt
+        local nsih_file=${TOP}/hardware/nexell/pyrope/boot/NSIH_SPI.txt
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
 

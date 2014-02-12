@@ -7,7 +7,7 @@ set -e
 
 TOP=$(pwd)
 
-SOURCE_BOARD_NAME=pyxis
+SOURCE_BOARD_NAME=lynx
 TARGET_BOARD_NAME=
 ROOT_DEVICE_TYPE=
 ROOT_DEVICE_SIZE="16GB"
@@ -296,6 +296,7 @@ function handle_root_device_size()
         echo "# packaging for emmc, sd" >> /tmp/BoardConfig.mk
         echo "TARGET_USERIMAGES_USE_EXT4       := true" >> /tmp/BoardConfig.mk
         echo "BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE := ext4" >> /tmp/BoardConfig.mk
+        echo "BOARD_BOOTIMAGE_PARTITION_SIZE := ${BOOT_IMAGE_SIZE}" >> /tmp/BoardConfig.mk
         echo "BOARD_SYSTEMIMAGE_PARTITION_SIZE := ${SYSTEM_IMAGE_SIZE}" >> /tmp/BoardConfig.mk
         echo "BOARD_CACHEIMAGE_PARTITION_SIZE  := ${CACHE_IMAGE_SIZE}" >> /tmp/BoardConfig.mk
         echo "BOARD_USERDATAIMAGE_PARTITION_SIZE := ${USERDATA_IMAGE_SIZE}" >> /tmp/BoardConfig.mk
@@ -339,13 +340,9 @@ function handle_external_sd_device_number()
             echo "===================================================="
         fi
 
-        replace=`awk '{print $5}' ${TARGET_BOARD_DIR}/vold.fstab | grep dw_mmc | awk -F'/' '{print $4}'`
-        if [ ${VERBOSE} == "true" ]; then
-            echo "handle_external_sd_device_number: replace ${replace} --> dw_mmc.${EXTERNAL_SDCARD_DEVICE_NUM}"
-        fi
-        sed -e "s/${replace}/dw_mmc.${EXTERNAL_SDCARD_DEVICE_NUM}/" ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
-        mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
-
+        local target_file=${TARGET_BOARD_DIR}/fstab.${TARGET_BOARD_NAME}
+        sed -i -e '/voldmanaged=sdcard/d' ${target_file}
+        echo "/devices/platform/dw_mmc.${EXTERNAL_SDCARD_DEVICE_NUM}/mmc_host/mmc0/mmc0 /storage/sdcard1 vfat   defaults    voldmanaged=sdcard1:auto" >> ${target_file}
         if [ ${VERBOSE} == "true" ]; then
             echo "Complete"
         fi
@@ -440,9 +437,9 @@ function handle_no_sd_storage()
             echo "===================================================="
         fi
 
-        # vold.fstab
-        sed -e '/sdcard1/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
-        mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
+        # fstab.${TARGET_BOARD_NAME}
+        local target_file=${TARGET_BOARD_DIR}/fstab.${TARGET_BOARD_NAME}
+        sed -i -e '/voldmanaged=sdcard/d' ${target_file}
 
         # overlay/frameworks/base/core/res/res/xml/storage_list.xml
         cat ${TARGET_BOARD_DIR}/overlay/frameworks/base/core/res/res/xml/storage_list.xml | sed -e '/external\ sdcard/,+4d' > /tmp/storage_list.xml
@@ -464,8 +461,8 @@ function handle_no_usb_storage()
         fi
 
         # vold.fstab
-        sed -e '/nxp4330-ehci/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
-        mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
+        #sed -e '/nxp4330-ehci/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
+        #mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
 
         # overlay/frameworks/base/core/res/res/xml/storage_list.xml
         cat ${TARGET_BOARD_DIR}/overlay/frameworks/base/core/res/res/xml/storage_list.xml | sed -e '/usb\ disk/,+4d' > /tmp/storage_list.xml
@@ -487,8 +484,8 @@ function handle_no_otg_storage()
         fi
 
         # vold.fstab
-        sed -e '/dwc3-gadget/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
-        mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
+        #sed -e '/dwc3-gadget/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
+        #mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
 
         # overlay/frameworks/base/core/res/res/xml/storage_list.xml
         cat ${TARGET_BOARD_DIR}/overlay/frameworks/base/core/res/res/xml/storage_list.xml | sed -e '/usb\ otg/,+4d' > /tmp/storage_list.xml

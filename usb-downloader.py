@@ -1,3 +1,4 @@
+# run : sudo python usb-downloader.py -b pyrope_2ndboot_USB.bin -f u-boot.bin -a 0x41000000 -j 0x41000000 -n NSIH_USB.txt
 import os
 import sys
 import argparse
@@ -202,6 +203,7 @@ if __name__ == '__main__':
         sys.exit(1)
 
     try:
+        me.download_header(header_list)
         me.dev.write(2, download_file_data, 0, 5000)
     except:
         print("error: failed to download downfile")

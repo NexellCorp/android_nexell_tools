@@ -109,14 +109,14 @@ function copy_bmp_files_to_boot()
 {
     local board_name=${1}
 
-    if [ -f device/nexell/${board_name}/boot/logo.bmp ]; then
-        cp device/nexell/${board_name}/boot/logo.bmp $RESULT_DIR/boot
+    if [ -f ${TOP}/device/nexell/${board_name}/boot/logo.bmp ]; then
+        cp ${TOP}/device/nexell/${board_name}/boot/logo.bmp $RESULT_DIR/boot
     fi
-    if [ -f device/nexell/${board_name}/boot/battery.bmp ]; then
-        cp device/nexell/${board_name}/boot/battery.bmp $RESULT_DIR/boot
+    if [ -f ${TOP}/device/nexell/${board_name}/boot/battery.bmp ]; then
+        cp ${TOP}/device/nexell/${board_name}/boot/battery.bmp $RESULT_DIR/boot
     fi
-    if [ -f device/nexell/${board_name}/boot/update.bmp ]; then
-        cp device/nexell/${board_name}/boot/update.bmp $RESULT_DIR/boot
+    if [ -f ${TOP}/device/nexell/${board_name}/boot/update.bmp ]; then
+        cp ${TOP}/device/nexell/${board_name}/boot/update.bmp $RESULT_DIR/boot
     fi
 }
 
