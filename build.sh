@@ -174,6 +174,10 @@ function build_uboot()
         echo "build u-boot"
         echo "=============================================="
 
+        if [ ! -e ${TOP}/u-boot ]; then
+            ln -s ${TOP}/linux/u-boot/u-boot-2013.x ${TOP}/u-boot
+        fi
+
         cd ${TOP}/u-boot
         make distclean
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
@@ -287,6 +291,10 @@ function build_kernel()
         echo "=============================================="
         echo "build kernel"
         echo "=============================================="
+
+        if [ ! -e ${TOP}/kernel ]; then
+            ln -s ${TOP}/linux/kernel/kernel-3.4.x ${TOP}/kernel
+        fi
 
         cd ${TOP}/kernel
 
