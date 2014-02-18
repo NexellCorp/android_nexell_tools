@@ -370,8 +370,10 @@ function make_android_root()
 {
     local out_dir=${TOP}/out/target/product/${BOARD_NAME}
     cd ${out_dir}/root
-    sed -e '/mount\ yaffs2/ d' -e '/on\ fs/ d' -e '/mount\ mtd/ d' -e '/Mount\ \// d' init.rc > init.rc.mine
-    mv init.rc.mine init.rc
+    sed -i -e '/mount\ yaffs2/ d' -e '/on\ fs/ d' -e '/mount\ mtd/ d' -e '/Mount\ \// d' init.rc
+
+    awk '/console\ \/system/{print; getline; print; getline; print; getline; print; getline; print "    user root"; getline}1' init.rc > /tmp/init.rc
+    mv /tmp/init.rc init.rc
 
     # handle nand boot
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
