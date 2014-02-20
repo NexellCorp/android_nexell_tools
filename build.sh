@@ -175,7 +175,7 @@ function build_uboot()
         echo "=============================================="
 
         if [ ! -e ${TOP}/u-boot ]; then
-            ln -s ${TOP}/linux/u-boot/u-boot-2013.x ${TOP}/u-boot
+            ln -s ${TOP}/linux/bootloader/u-boot-2013.x ${TOP}/u-boot
         fi
 
         cd ${TOP}/u-boot
