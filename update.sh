@@ -185,10 +185,17 @@ function flash()
     sudo ${FASTBOOT} flash $1 $2
 }
 
+function restart_board()
+{
+    vmsg "restart..."
+    sudo ${FASTBOOT} reboot
+}
+
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        local secondboot_file=${TOP}/hardware/nexell/pyrope/boot/pyrope_2ndboot_SPI.bin
+        #local secondboot_file=${TOP}/hardware/nexell/pyrope/boot/pyrope_2ndboot_SPI.bin
+        local secondboot_file=${TOP}/linux/pyrope/boot/2ndboot/pyrope_2ndboot_${BOARD_NAME}_spi.bin
         if [ ! -f ${secondboot_file} ]; then
             local input=
             read -p "enter your secondboot file in hardware/nexell/pyrope/boot directory: " input
@@ -204,12 +211,14 @@ function update_2ndboot()
             fi
         fi
 
-        local nsih_file=${TOP}/hardware/nexell/pyrope/boot/NSIH_SPI.txt
+        #local nsih_file=${TOP}/hardware/nexell/pyrope/boot/NSIH_SPI.txt
+        local nsih_file=${TOP}/linux/pyrope/boot/nsih/nsih_${BOARD_NAME}_spi.txt
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
 
         vmsg "update 2ndboot: ${secondboot_file}"
-        python ${TOP}/device/nexell/tools/make-pyrope-2ndboot-download-image.py ${nsih_file} ${secondboot_file} ${secondboot_out_file} >& /dev/null
+        #python ${TOP}/device/nexell/tools/make-pyrope-2ndboot-download-image.py ${nsih_file} ${secondboot_file} ${secondboot_out_file} >& /dev/null
+        ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d other -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000
         flash 2ndboot ${secondboot_out_file}
         rm -f ${secondboot_out_file}
     fi
@@ -248,6 +257,24 @@ function update_boot()
         fi
     fi
 
+}
+
+function apply_kernel_initramfs()
+{
+    local src_file=${TOP}/kernel/.config
+
+    if [ ! -e ${src_file} ]; then
+        echo "No kernel .config file!!!"
+        exit 1
+    fi
+
+    local escape_top=$(echo ${TOP} | sed -e 's/\\/\\\\/g' -e 's/\//\\\//g')
+    sed -i 's/CONFIG_INITRAMFS_SOURCE=.*/CONFIG_INITRAMFS_SOURCE=\"'${escape_top}'\/result\/root\"/g' ${src_file}
+    cd ${TOP}/kernel
+    yes "" | make ARCH=arm oldconfig
+    make ARCH=arm uImage -j8
+    cp arch/arm/boot/uImage ${RESULT_DIR}/boot
+    cd ${TOP}
 }
 
 function update_kernel()
@@ -385,7 +412,10 @@ get_board_name
 get_root_device
 update_2ndboot
 update_bootloader
-if [ ${UPDATE_BOOT} == "false" ]; then
+if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
+    apply_kernel_initramfs
+fi
+if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
     update_kernel
     update_rootfs
     update_bmp
@@ -395,3 +425,5 @@ fi
 update_system
 update_cache
 update_userdata
+
+restart_board
