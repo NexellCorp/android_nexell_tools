@@ -438,6 +438,8 @@ function make_boot()
     cp ${out_dir}/root.img.gz ${RESULT_DIR}/boot
     cp -a ${out_dir}/root ${RESULT_DIR}
 
+    apply_kernel_initramfs
+
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
         echo 6

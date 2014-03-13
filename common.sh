@@ -417,3 +417,21 @@ function get_kernel_board_list()
     local boards=$(find $src_dir -maxdepth 1 -type d | awk -F'/' '{print $NF}' | sed -e '/plat-nxp4330/d' -e '/common/d')
     echo $boards
 }
+
+function apply_kernel_initramfs()
+{
+    local src_file=${TOP}/kernel/.config
+
+    if [ ! -e ${src_file} ]; then
+        echo "No kernel .config file!!!"
+        exit 1
+    fi
+
+    local escape_top=$(echo ${TOP} | sed -e 's/\\/\\\\/g' -e 's/\//\\\//g')
+    sed -i 's/CONFIG_INITRAMFS_SOURCE=.*/CONFIG_INITRAMFS_SOURCE=\"'${escape_top}'\/result\/root\"/g' ${src_file}
+    cd ${TOP}/kernel
+    yes "" | make ARCH=arm oldconfig
+    make ARCH=arm uImage -j8
+    cp arch/arm/boot/uImage ${RESULT_DIR}/boot
+    cd ${TOP}
+}
