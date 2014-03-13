@@ -175,7 +175,8 @@ function build_uboot()
         echo "=============================================="
 
         if [ ! -e ${TOP}/u-boot ]; then
-            ln -s ${TOP}/linux/bootloader/u-boot-2013.x ${TOP}/u-boot
+            cd ${TOP}
+            ln -s linux/bootloader/u-boot-2013.x u-boot
         fi
 
         cd ${TOP}/u-boot
@@ -293,7 +294,8 @@ function build_kernel()
         echo "=============================================="
 
         if [ ! -e ${TOP}/kernel ]; then
-            ln -s ${TOP}/linux/kernel/kernel-3.4.x ${TOP}/kernel
+            cd ${TOP}
+            ln -s linux/kernel/kernel-3.4.x kernel
         fi
 
         cd ${TOP}/kernel
