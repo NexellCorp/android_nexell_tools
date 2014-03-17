@@ -9,6 +9,7 @@ export TOP RESULT_DIR
 
 # user option
 BOOT_DEVICE_TYPE=
+PARTMAP="nofile"
 UPDATE_ALL=true
 UPDATE_2NDBOOT=false
 UPDATE_UBOOT=false
@@ -24,6 +25,7 @@ VERBOSE=false
 # dynamic config
 BOARD_NAME=
 ROOT_DEVICE_TYPE=
+NSIH_FILE=
 
 function check_top()
 {
@@ -35,8 +37,9 @@ function check_top()
 
 function usage()
 {
-    echo "Usage: $0 -d <boot device type> [-t 2ndboot -t u-boot -t kernel -t rootfs -t bmp -t boot -t system -t userdata -t cache -v]"
-    echo -e '\n -d <boot device type> : your main boot device type(spirom, sd0, sd1, nand)'
+    echo "Usage: $0 -d <boot device type> [-p partmap -t 2ndboot -t u-boot -t kernel -t rootfs -t bmp -t boot -t system -t userdata -t cache -v]"
+    echo -e '\n -d <boot device type> : your main boot device type(spirom, sd0, sd2, nand)'
+    echo " -p partmap   : specify fastboot partmap file (if not specified, use device/nexell/tools/partmap/*)"
     echo " -t 2ndboot   : update 2ndboot"
     echo " -t u-boot    : update u-boot"
     echo " -t kernel    : update kernel"
@@ -79,6 +82,7 @@ function parse_args()
     while true; do
         case "$1" in
             -d ) BOOT_DEVICE_TYPE=$2; shift 2 ;;
+            -p ) PARTMAP=$2; shift 2 ;;
             -t ) case "$2" in
                     2ndboot ) UPDATE_ALL=false; UPDATE_2NDBOOT=true ;;
                     u-boot  ) UPDATE_ALL=false; UPDATE_UBOOT=true ;;
@@ -104,7 +108,7 @@ function check_boot_device_type()
     case ${BOOT_DEVICE_TYPE} in
         spirom) ;;
         sd0) ;;
-        sd1) ;;
+        sd2) ;;
         nand) ;;
         * ) echo "Error: invalid boot device type: ${BOOT_DEVICE_TYPE}"; exit 1 ;;
     esac
@@ -191,36 +195,98 @@ function restart_board()
     sudo ${FASTBOOT} reboot
 }
 
+function create_partmap_for_spirom()
+{
+    local partmap_file=${RESULT_DIR}/partmap.txt
+    if [ -f ${partmap_file} ]; then
+        rm -f ${partmap_file}
+    fi
+
+    echo "flash=eeprom,0:2ndboot:2nd:0x0,0x4000;" > ${partmap_file}
+    echo "flash=eeprom,0:bootloader:boot:0x10000,0x70000;" >> ${partmap_file}
+    if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+        echo "flash=nand,0:kernel:raw:0x000000,0x600000;" >> ${partmap_file}
+        echo "flash=nand,0:bootlogo:raw:0x2000000,0x400000;" >> ${partmap_file}
+        echo "flash=nand,0:battery:raw:0x2800000,0x400000;" >> ${partmap_file}
+        echo "flash=nand,0:update:raw:0x3000000,0x400000;" >> ${partmap_file}
+        echo "flash=nand,0:system:ubi:0x4000000,0x20000000;" >> ${partmap_file}
+        echo "flash=nand,0:cache:ubi:0x24000000,0x10000000;" >> ${partmap_file}
+        echo "flash=nand,0:userdata:ubi:0x34000000,0x0;" >> ${partmap_file}
+    else
+        local dev_num=${ROOT_DEVICE_TYPE#sd}
+        echo "flash=mmc,${dev_num}:boot:ext4:0x000100000,0x004000000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:system:ext4:0x004100000,0x028E00000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:cache:ext4:0x02CF00000,0x21000000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:userdata:ext4:0x4df00000,0x0;" >> ${partmap_file}
+    fi
+}
+
+function update_partitionmap()
+{
+    local partmap_file=
+    if [ ${PARTMAP} == "nofile" ]; then
+        if [ -f ${TOP}/device/nexell/${BOARD_NAME}/partmap.txt ]; then
+            partmap_file=${TOP}/device/nexell/${BOARD_NAME}/partmap.txt
+        else
+            if [ ${BOOT_DEVICE_TYPE} == "spirom" ]; then
+                create_partmap_for_spirom
+                partmap_file=${RESULT_DIR}/partmap.txt
+            else
+                partmap_file=${TOP}/device/nexell/tools/partmap/partmap_${BOOT_DEVICE_TYPE}.txt
+            fi
+        fi
+    else
+        partmap_file=${PARTMAP}
+    fi
+    if [ ! -f ${partmap_file} ]; then
+        echo "can't find partmap file: ${partmap_file}!!!"
+        exit -1
+    fi
+    flash partmap ${partmap_file}
+}
+
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        #local secondboot_file=${TOP}/hardware/nexell/pyrope/boot/pyrope_2ndboot_SPI.bin
-        local secondboot_file=${TOP}/linux/pyrope/boot/2ndboot/pyrope_2ndboot_${BOARD_NAME}_spi.bin
+        local secondboot_dir=${TOP}/linux/pyrope/boot/2ndboot
+        local nsih_dir=${TOP}/linux/pyrope/boot/nsih
+        local secondboot_file=
+        local nsih_file=
+        local option_d=other
+        local option_p=
+        case ${BOOT_DEVICE_TYPE} in
+            spirom) 
+                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_spi.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_spi.txt
+                ;;
+            sd0 | sd2)
+                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_sdmmc.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_sdmmc.txt
+                ;;
+            nand)
+                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_nand.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_nand.txt
+                option_d=nand
+                option_p="-p 8192"
+                ;;
+        esac
+
         if [ ! -f ${secondboot_file} ]; then
-            local input=
-            read -p "enter your secondboot file in hardware/nexell/pyrope/boot directory: " input
-            if [ -z ${input} ]; then
-                echo "You must enter valid file name!!!"
-                exit 1
-            else
-                secondboot_file=${TOP}/hardware/nexell/pyrope/boot/${input}
-                if [ ! -f ${secondboot_file} ]; then
-                    echo "You must enter valid file name!!!"
-                    exit 1
-                fi
-            fi
+            echo "can't find secondboot file: ${secondboot_file}!, check ${secondboot_dir}"
+            exit -1
         fi
 
-        #local nsih_file=${TOP}/hardware/nexell/pyrope/boot/NSIH_SPI.txt
-        local nsih_file=${TOP}/linux/pyrope/boot/nsih/nsih_${BOARD_NAME}_spi.txt
+        if [ ! -f ${nsih_file} ]; then
+            echo "can't find nsih file: ${nsih_file}!, check ${nsih_dir}"
+            exit -1
+        fi
+
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
-
         vmsg "update 2ndboot: ${secondboot_file}"
-        #python ${TOP}/device/nexell/tools/make-pyrope-2ndboot-download-image.py ${nsih_file} ${secondboot_file} ${secondboot_out_file} >& /dev/null
-        ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d other -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000
+        ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000 ${option_p}
         flash 2ndboot ${secondboot_out_file}
-        rm -f ${secondboot_out_file}
+        NSIH_FILE=${nsih_file}
     fi
 }
 
@@ -236,8 +302,14 @@ function update_bootloader()
             exit 1
         fi
 
-        vmsg "update bootloader: ${RESULT_DIR}/u-boot.bin"
-        flash bootloader ${RESULT_DIR}/u-boot.bin
+        if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+            ${TOP}/linux/pyrope/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p 8192
+            vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
+            flash bootloader ${RESULT_DIR}/u-boot.ecc
+        else
+            vmsg "update bootloader: ${RESULT_DIR}/u-boot.bin"
+            flash bootloader ${RESULT_DIR}/u-boot.bin
+        fi
     fi
 }
 
@@ -392,17 +464,23 @@ check_target_device
 check_boot_device_type
 get_board_name
 get_root_device
+update_partitionmap
 update_2ndboot
 update_bootloader
-if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
+if [ ${UPDATE_KERNEL} == "true" ]; then
     apply_kernel_initramfs
 fi
-if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
+if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
     update_kernel
-    update_rootfs
     update_bmp
 else
-    update_boot
+    if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
+        update_kernel
+        update_rootfs
+        update_bmp
+    else
+        update_boot
+    fi
 fi
 update_system
 update_cache

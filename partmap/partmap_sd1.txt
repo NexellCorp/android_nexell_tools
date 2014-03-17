@@ -1,0 +1,11 @@
+# sd0 partition map 
+# flash= <device>.<dev no>:<partition>:<fstype>:<start>,<length>
+#   support device : eeprom, nand, mmc
+#   support fstype : 2nd, boot, raw, fat, ext4, ubi
+#
+flash=mmc,2:2ndboot:2nd:0x200,0x8e00;
+flash=mmc,2:bootloader:boot:0x8000,0x77000;
+flash=mmc,2:boot:ext4:0x000100000,0x004000000;
+flash=mmc,2:system:ext4:0x004100000,0x028E00000;
+flash=mmc,2:cache:ext4:0x02CF00000,0x21000000;
+flash=mmc,2:userdata:ext4:0x4df00000,0x0;

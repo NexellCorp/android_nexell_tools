@@ -398,12 +398,64 @@ function make_android_root()
     cd ${TOP}
 }
 
+function apply_android_overlay()
+{
+    cd ${TOP}
+    local overlay_dir=${TOP}/hardware/nexell/pyrope/overlay-apps
+    local overlay_list_file=${overlay_dir}/files.txt
+    local token1=""
+    while read line; do
+        token1=$(echo ${line} | awk '{print $1}')
+        if [ ${token1} == "replace" ]; then
+            local src_file=$(echo ${line} | awk '{print $2}')
+            local replace_file=$(echo ${line} | awk '{print $3}')
+            cp ${overlay_dir}/${src_file} ${RESULT_DIR}/${replace_file}
+        elif [ ${token1} == "remove" ]; then
+            local remove_file=$(echo ${line} | awk '{print $2}')
+            rm -f ${RESULT_DIR}/${remove_file}
+        fi
+    done < ${overlay_list_file}
+}
+
 function refine_android_system()
 {
     local out_dir=${TOP}/out/target/product/${BOARD_NAME}
     cd ${out_dir}/system
     chmod 644 *.prop
     chmod 644 lib/modules/*
+    cd ${TOP}
+}
+
+function patch_android()
+{
+    cd ${TOP}
+    local patch_dir=${TOP}/hardware/nexell/pyrope/patch
+    local patch_list_file=${patch_dir}/files.txt
+    local src_file=""
+    local dst_dir=""
+    while read line; do
+        src_file=$(echo ${line} | awk '{print $1}')
+        dst_dir=$(echo ${line} | awk '{print $2}')
+        echo "copy ${patch_dir}/${src_file}  =====> ${TOP}/${dst_dir}"
+        cp ${patch_dir}/${src_file} ${TOP}/${dst_dir}
+    done < ${patch_list_file}
+    cd ${TOP}
+}
+
+function restore_patch()
+{
+    cd ${TOP}
+    local patch_dir=${TOP}/hardware/nexell/pyrope/patch
+    local patch_list_file=${patch_dir}/files.txt
+    local src_file=""
+    local dst_dir=""
+    while read line; do
+        src_file=$(echo ${line} | awk '{print $1}')
+        dst_dir=$(echo ${line} | awk '{print $2}')
+        echo "restore ${TOP}/${dst_dir}/${src_file}"
+        cd ${TOP}/${dst_dir}
+        git checkout ${src_file}
+    done < ${patch_list_file}
     cd ${TOP}
 }
 
@@ -415,12 +467,16 @@ function build_android()
         echo "build android"
         echo "=============================================="
 
+        patch_android
+
         make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug
-        #make -j8 PRODUCT-full_${BOARD_NAME}-userdebug
         check_result "build-android"
 
         make_android_root
+        apply_android_overlay
         refine_android_system
+
+        restore_patch
 
         echo "---------- End of build android"
     fi
