@@ -166,6 +166,60 @@ function apply_uboot_partition_config()
     fi
 }
 
+function enable_uboot_sd_root()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
+    local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
+    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load mmc '"${root_device_num}"':1 0x48000000 uImage;bootm 0x48000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"ext4load mmc '"${root_device_num}"':1 0x47000000 logo.bmp; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"ext4load mmc '"${root_device_num}"':1 0x47000000 battery.bmp; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"ext4load mmc '"${root_device_num}"':1 0x47000000 update.bmp; drawbmp 0x47000000\"/g' ${src_file}
+}
+
+function disable_uboot_sd_root()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    echo "src_file: ${src_file}"
+    sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
+}
+
+function enable_uboot_nand_root()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_NAND/#define CONFIG_CMD_NAND/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_UBIFS/#define CONFIG_CMD_UBIFS/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"nand read 0x48000000 0xc00000 0x600000;bootm 0x48000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"nand read 0x47000000 0x2000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"nand read 0x47000000 0x2800000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"nand read 0x47000000 0x3000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
+}
+
+function disable_uboot_nand_root()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^#define[[:space:]]CONFIG_CMD_NAND/\/\/#define CONFIG_CMD_NAND/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_CMD_UBIFS/\/\/#define CONFIG_CMD_UBIFS/g' ${src_file}
+}
+
+function apply_uboot_sd_root()
+{
+    echo "====> apply sd root"
+    disable_uboot_nand_root
+    enable_uboot_sd_root
+}
+
+function apply_uboot_nand_root()
+{
+    echo "====> apply nand root"
+    disable_uboot_sd_root
+    enable_uboot_nand_root
+}
+
 function build_uboot()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_UBOOT} == "true" ]; then
@@ -181,11 +235,13 @@ function build_uboot()
 
         cd ${TOP}/u-boot
         make distclean
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            apply_uboot_nand_config
-        else # sd, usb
-            apply_uboot_partition_config
-        fi
+
+        echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
+        case ${ROOT_DEVICE_TYPE} in
+            sd) apply_uboot_sd_root ;;
+            nand) apply_uboot_nand_root ;;
+        esac
+
         make nxp4330q_${BOARD_NAME}_config
         make -j8
         check_result "build-uboot"
@@ -206,7 +262,7 @@ function apply_kernel_nand_config()
     cp ${src_file} ${dst_file}
 
     # cmdline
-    sed -i 's/CONFIG_CMDLINE=.*/CONFIG_CMDLINE=\"console=ttyAMA0,115200n8 ubi.mtd=0 ubi.mtd=1 ubi.mtd=2 root=\/dev\/ram0 rw rootfstype=ext2 ramdisk_size=2048 initrd=0x43000000,2M androidboot.console=ttyAMA0 init=\/init androidboot.hardware='${BOARD_NAME}'\"/g' ${dst_file}
+    sed -i 's/CONFIG_CMDLINE=.*/CONFIG_CMDLINE=\"console=ttyAMA0,115200n8 ubi.mtd=0 ubi.mtd=1 ubi.mtd=2 androidboot.console=ttyAMA0 init=\/init androidboot.hardware='${BOARD_NAME}' androidboot.serialno=0123456789abcdef\"/g' ${dst_file}
     # mtd
     sed -i 's/.*CONFIG_MTD.*/CONFIG_MTD=y/g' ${dst_file}
     sed -i '/CONFIG_MTD=y/ a\
@@ -268,7 +324,8 @@ CONFIG_MTD_NAND_IDS=y' ${dst_file}
     sed -i '/CONFIG_MTD_NAND_IDS=y/ a\
 CONFIG_MTD_NAND_NEXELL=y' ${dst_file}
     sed -i '/CONFIG_MTD_NAND_NEXELL=y/ a\
-CONFIG_MTD_NAND_ECC_HW=y' ${dst_file}
+CONFIG_MTD_NAND_ECC_HW=y a\
+CONFIG_NAND_RANDOMIZER=y' ${dst_file}
     sed -i '/CONFIG_MTD_NAND_ECC_HW=y/ a\
 CONFIG_MTD_UBI=y' ${dst_file}
     sed -i '/CONFIG_MTD_UBI=y/ a\
@@ -493,14 +550,13 @@ function make_boot()
 
     copy_bmp_files_to_boot ${BOARD_NAME}
 
-    cp ${out_dir}/root.img.gz ${RESULT_DIR}/boot
+    #cp ${out_dir}/root.img.gz ${RESULT_DIR}/boot
     cp -a ${out_dir}/root ${RESULT_DIR}
 
     apply_kernel_initramfs
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
-        echo 6
     fi
     vmsg "end make_boot"
 }
