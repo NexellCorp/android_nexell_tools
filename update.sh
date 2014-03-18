@@ -26,6 +26,7 @@ VERBOSE=false
 BOARD_NAME=
 ROOT_DEVICE_TYPE=
 NSIH_FILE=
+APPLY_KERNEL_INIT_RAMFS=false
 
 function check_top()
 {
@@ -175,6 +176,26 @@ function get_root_device()
     vmsg "ROOT_DEVICE_TYPE: ${ROOT_DEVICE_TYPE}"
 }
 
+function get_sd_boot_device_number()
+{
+     echo ${BOOT_DEVICE_TYPE##sd}
+}
+
+function change_fstab_for_sd()
+{
+    if [ ${BOOT_DEVICE_TYPE%%[0-9]} == "sd" ]; then
+        local src_file=${RESULT_DIR}/root/fstab.${BOARD_NAME}
+        local fstab=${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME}
+        local sd_boot_device_num=$(get_sd_boot_device_number)
+        local sd_root_device_num=$(get_sd_device_number ${fstab})
+        if [ "tmp${sd_boot_device_num}" != "tmp${sd_root_device_num}" ]; then
+            echo "change fstab root device : ${sd_root_device_num} --> ${sd_boot_device_num}"
+            sed -i 's/dw_mmc.'"${sd_root_device_num}"'/dw_mmc.'"${sd_boot_device_num}"'/g' ${src_file}
+            APPLY_KERNEL_INIT_RAMFS=true
+        fi
+    fi
+}
+
 function flash()
 {
     vmsg "flash $1 $2"
@@ -277,9 +298,8 @@ function update_2ndboot()
 
         vmsg "update 2ndboot: ${secondboot_file}"
         ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000 ${option_p}
-        # this is test
-        #flash 2ndboot ${secondboot_out_file}
-        flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
+        flash 2ndboot ${secondboot_out_file}
+        #flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
         NSIH_FILE=${nsih_file}
     fi
 }
@@ -545,7 +565,8 @@ get_root_device
 update_partitionmap
 update_2ndboot
 update_bootloader
-if [ ${UPDATE_KERNEL} == "true" ]; then
+change_fstab_for_sd
+if [ ${UPDATE_KERNEL} == "true" ] || [ ${APPLY_KERNEL_INIT_RAMFS} == "true" ]; then
     apply_kernel_initramfs
 fi
 if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then

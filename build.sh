@@ -530,7 +530,6 @@ function build_android()
         check_result "build-android"
 
         make_android_root
-        apply_android_overlay
         refine_android_system
 
         restore_patch
@@ -566,6 +565,9 @@ function make_system()
     vmsg "start make_system"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/system ${RESULT_DIR}
+
+    apply_android_overlay
+
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         cp ${out_dir}/system.img ${RESULT_DIR}
     else
