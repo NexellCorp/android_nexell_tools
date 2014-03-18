@@ -151,14 +151,6 @@ function is_nand_device()
     fi
 }
 
-function get_sd_device_number()
-{
-    local f="$1"
-    local dev_num=$(cat $f | grep /system | tail -n1 | awk '{print $1}' | awk -F'/' '{print $5}')
-    dev_num=$(echo ${dev_num#dw_mmc.})
-    echo "sd${dev_num}"
-}
-
 function get_root_device()
 {
     local fstab=${RESULT_DIR}/root/fstab.${BOARD_NAME}
@@ -169,7 +161,7 @@ function get_root_device()
 
     local is_sd=$(is_sd_device ${fstab})
     if [ ${is_sd} == "true" ]; then
-        ROOT_DEVICE_TYPE=$(get_sd_device_number ${fstab})
+        ROOT_DEVICE_TYPE="sd$(get_sd_device_number ${fstab})"
     else
         local is_nand=$(is_nand_device ${fstab})
         if [ ${is_nand} == "true" ]; then
@@ -205,7 +197,7 @@ function create_partmap_for_spirom()
     echo "flash=eeprom,0:2ndboot:2nd:0x0,0x4000;" > ${partmap_file}
     echo "flash=eeprom,0:bootloader:boot:0x10000,0x70000;" >> ${partmap_file}
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        echo "flash=nand,0:kernel:raw:0x000000,0x600000;" >> ${partmap_file}
+        echo "flash=nand,0:kernel:raw:0xc00000,0x600000;" >> ${partmap_file}
         echo "flash=nand,0:bootlogo:raw:0x2000000,0x400000;" >> ${partmap_file}
         echo "flash=nand,0:battery:raw:0x2800000,0x400000;" >> ${partmap_file}
         echo "flash=nand,0:update:raw:0x3000000,0x400000;" >> ${partmap_file}
@@ -285,14 +277,97 @@ function update_2ndboot()
 
         vmsg "update 2ndboot: ${secondboot_file}"
         ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000 ${option_p}
-        flash 2ndboot ${secondboot_out_file}
+        # this is test
+        #flash 2ndboot ${secondboot_out_file}
+        flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
         NSIH_FILE=${nsih_file}
     fi
+}
+
+# enable/disable functions for only boot device type
+function enable_uboot_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^\/\/#define CONFIG_CMD_EEPROM/#define CONFIG_CMD_EEPROM/g' ${src_file}
+    sed -i 's/^\/\/#define CONFIG_SPI/#define CONFIG_SPI/g' ${src_file}
+    sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_EEPROM/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+function disable_uboot_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^#define CONFIG_CMD_EEPROM/\/\/#define CONFIG_CMD_EEPROM/g' ${src_file}
+    sed -i 's/^#define CONFIG_SPI/\/\/#define CONFIG_SPI/g' ${src_file}
+    sed -i 's/^#define CONFIG_ENV_IS_IN_EEPROM/\/\/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+function enable_uboot_nand_env()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_NAND/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
+}
+
+function disable_uboot_nand_env()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^#define CONFIG_ENV_IS_IN_NAND/\/\/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
+}
+
+function enable_uboot_mmc_env()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_MMC/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
+}
+
+function disable_uboot_mmc_env()
+{
+    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    sed -i 's/^#define CONFIG_ENV_IS_IN_MMC/\/\/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
+}
+
+function apply_uboot_eeprom_config()
+{
+    enable_uboot_eeprom
+    disable_uboot_nand_env
+    disable_uboot_mmc_env
+}
+
+function apply_uboot_sd_config()
+{
+    disable_uboot_eeprom
+    disable_uboot_nand_env
+    enable_uboot_mmc_env
+}
+
+function apply_uboot_nand_config()
+{
+    disable_uboot_eeprom
+    enable_uboot_nand_env
+    disable_uboot_mmc_env
 }
 
 function update_bootloader()
 {
     if [ ${UPDATE_UBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
+
+        # check bootdevice env save location
+        local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+        local backup_file=/tmp/nxp4330q_${BOARD_NAME}.h
+        cp ${src_file} ${backup_file}
+        case ${BOOT_DEVICE_TYPE} in
+            spirom) apply_uboot_eeprom_config ;;
+            sd0 | sd2) apply_uboot_sd_config ;;
+            nand) apply_uboot_nand_config ;;
+        esac
+        local diff_result="$(diff -urN ${src_file} ${backup_file})"
+        if [[ ${#diff_result} > 0 ]]; then
+            echo ${src_file} is modified!!! rebuild
+            cd ${TOP}/u-boot
+            make -j8
+            cd ${TOP}
+            cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
+        fi
+
         if [ ${UPDATE_UBOOT} == "true" ]; then
             cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
         fi
@@ -303,7 +378,10 @@ function update_bootloader()
         fi
 
         if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-            ${TOP}/linux/pyrope/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p 8192
+            local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_NAME})
+            local page_size=$(echo ${nand_sizes} | awk '{print $1}')
+
+            ${TOP}/linux/pyrope/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootloader ${RESULT_DIR}/u-boot.ecc
         else
@@ -359,24 +437,24 @@ function update_rootfs()
     if [ ${UPDATE_ROOTFS} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_ROOTFS} == "true" ]; then
             cd ${RESULT_DIR}
-            ${TOP}/device/nexell/tools/mkramdisk.sh root 2
-            mv root.img.gz ${RESULT_DIR}/boot
-            cd ${TOP}
+            #${TOP}/device/nexell/tools/mkramdisk.sh root 2
+            #mv root.img.gz ${RESULT_DIR}/boot
+            #cd ${TOP}
 
             if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
             fi
         fi
 
-        if [ ! -f ${RESULT_DIR}/boot/root.img.gz ]; then
-            echo "Error: can't find root.img.gz check build!!!"
-            exit 1
-        fi
+        #if [ ! -f ${RESULT_DIR}/boot/root.img.gz ]; then
+            #echo "Error: can't find root.img.gz check build!!!"
+            #exit 1
+        #fi
 
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            flash ramdisk ${RESULT_DIR}/boot/root.img.gz
-        else
+        if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             update_boot 1
+        #else
+            #flash ramdisk ${RESULT_DIR}/boot/root.img.gz
         fi
     fi
 }
@@ -459,8 +537,8 @@ source device/nexell/tools/common.sh
 parse_args $@
 #export VERBOSE
 
-check_fastboot
-check_target_device
+#check_fastboot
+#check_target_device
 check_boot_device_type
 get_board_name
 get_root_device

@@ -255,7 +255,7 @@ function query_nand_sizes()
         if [ -z ${page_size} ] || [ -z ${block_size} ] || [ -z ${total_size} ]; then
             page_size=
             until [ ${page_size} ]; do
-                input=$(get_userinput_number "===> Enter your nand device's Page Size in Bytes: ")
+                input=$(get_userinput_number "===> Enter your nand device's Page Size in Bytes(if you don't know, type h): ")
                 if [ ${input} == "invalid" ]; then
                     ${TOP}/device/nexell/tools/nand_list.sh
                     echo "You must enter only Number!!!, see upper list's PAGE tab"
@@ -266,7 +266,7 @@ function query_nand_sizes()
 
             block_size=
             until [ ${block_size} ]; do
-                input=$(get_userinput_number "===> Enter your nand device's Block Size in KiloBytes: ")
+                input=$(get_userinput_number "===> Enter your nand device's Block Size in KiloBytes(if you don't know, type h): ")
                 if [ ${input} == "invalid" ]; then
                     ${TOP}/device/nexell/tools/nand_list.sh
                     echo "You must enter only Number!!!, see upper list's BLOCK tab"
@@ -277,7 +277,7 @@ function query_nand_sizes()
 
             total_size=
             until [ ${total_size} ]; do
-                input=$(get_userinput_number "===> Enter your nand device's Total Size in MegaBytes: ")
+                input=$(get_userinput_number "===> Enter your nand device's Total Size in MegaBytes(if you don't know, type h): ")
                 if [ ${input} == "invalid" ]; then
                     ${TOP}/device/nexell/tools/nand_list.sh
                     echo "You must enter only Number!!!, see upper list's TOTAL tab"
@@ -358,14 +358,15 @@ function make_ubi_image_for_nand()
 
     local ubi_cfg_file=$(create_tmp_ubi_cfg ${partition_name} ${partition_size})
 
-    sudo ${TOP}/device/nexell/tools/mk_ubifs.sh -p ${page_size} \
+    sudo ${TOP}/linux/pyrope/tools/bin/mk_ubifs.sh \
+        -p ${page_size} \
         -s ${page_size} \
         -b ${block_size} \
         -l ${partition_size} \
         -r ${RESULT_DIR}/${partition_name} \
         -i ${ubi_cfg_file} \
         -c ${RESULT_DIR} \
-        -t ${TOP}/device/nexell/tools/mtd-utils \
+        -t ${TOP}/linux/pyrope/tools/bin/mtd-utils \
 		-f ${total_size} \
         -v ${partition_name} \
         -n ${partition_name}.img
@@ -435,3 +436,13 @@ function apply_kernel_initramfs()
     cp arch/arm/boot/uImage ${RESULT_DIR}/boot
     cd ${TOP}
 }
+
+function get_sd_device_number()
+{
+    local f="$1"
+    local dev_num=$(cat $f | grep /system | tail -n1 | awk '{print $1}' | awk -F'/' '{print $5}')
+    dev_num=$(echo ${dev_num#dw_mmc.})
+    echo "${dev_num}"
+}
+
+
