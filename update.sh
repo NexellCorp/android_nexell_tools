@@ -28,6 +28,8 @@ ROOT_DEVICE_TYPE=
 NSIH_FILE=
 APPLY_KERNEL_INIT_RAMFS=false
 
+ROOT_DEVICE_SIZE=
+
 function check_top()
 {
     if [ ! -d ${TOP}/.repo ]; then
@@ -181,6 +183,28 @@ function get_sd_boot_device_number()
      echo ${BOOT_DEVICE_TYPE##sd}
 }
 
+function get_root_device_size()
+{
+    local command=
+    if [ ${ROOT_DEVICE_TYPE%[0-9]} == "sd" ]; then
+        command="capacity.mmc.${ROOT_DEVICE_TYPE##sd}"
+    else
+        command="capacity.nand"
+    fi
+    local result_file=/tmp/size.txt 
+    echo "command : ${command}"
+    sudo ${FASTBOOT} getvar ${command} 2> ${result_file}
+    cat ${result_file}
+    local failed=$(cat ${result_file} | grep FAILED | awk '{print $2}')
+    if [ -z ${failed} ]; then
+        local size=$(cat ${result_file} | grep capacity | awk '{print $2}')
+        ROOT_DEVICE_SIZE=${size}
+    else
+        ROOT_DEVICE_SIZE=0
+    fi
+    rm -f ${result_file}
+}
+
 function change_fstab_for_sd()
 {
     if [ ${BOOT_DEVICE_TYPE%%[0-9]} == "sd" ]; then
@@ -191,7 +215,7 @@ function change_fstab_for_sd()
         if [ "tmp${sd_boot_device_num}" != "tmp${sd_root_device_num}" ]; then
             echo "change fstab root device : ${sd_root_device_num} --> ${sd_boot_device_num}"
             sed -i 's/dw_mmc.'"${sd_root_device_num}"'/dw_mmc.'"${sd_boot_device_num}"'/g' ${src_file}
-            APPLY_KERNEL_INIT_RAMFS=true
+            #APPLY_KERNEL_INIT_RAMFS=true
         fi
     fi
 }
@@ -456,25 +480,25 @@ function update_rootfs()
 {
     if [ ${UPDATE_ROOTFS} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_ROOTFS} == "true" ]; then
-            cd ${RESULT_DIR}
-            #${TOP}/device/nexell/tools/mkramdisk.sh root 2
-            #mv root.img.gz ${RESULT_DIR}/boot
-            #cd ${TOP}
+            ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
+
+            cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
+
+            if [ ! -f ${RESULT_DIR}/boot/root.img.gz ]; then
+                echo "Error: can't find root.img.gz check build!!!"
+                exit 1
+            fi
 
             if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
             fi
         fi
 
-        #if [ ! -f ${RESULT_DIR}/boot/root.img.gz ]; then
-            #echo "Error: can't find root.img.gz check build!!!"
-            #exit 1
-        #fi
 
         if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             update_boot 1
-        #else
-            #flash ramdisk ${RESULT_DIR}/boot/root.img.gz
+        else
+            flash ramdisk ${RESULT_DIR}/boot/root.img.gz
         fi
     fi
 }
@@ -536,15 +560,23 @@ function update_cache()
     fi
 }
 
+function recalc_userdata_size()
+{
+    local boot_size=$(get_partition_size ${BOARD_NAME} boot)
+    local system_size=$(get_partition_size ${BOARD_NAME} system)
+    local cache_size=$(get_partition_size ${BOARD_NAME} cache)
+    local user_data_size=$((ROOT_DEVICE_SIZE - boot_size - system_size - cache_size - (1024*1024)))
+    echo -n "${user_data_size}"
+}
+
 function update_userdata()
 {
     if [ ${UPDATE_USERDATA} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        if [ ${UPDATE_USERDATA} == "true" ]; then
-            if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-                make_ubi_image_for_nand ${BOARD_NAME} userdata
-            else
-                make_ext4 ${BOARD_NAME} userdata
-            fi
+        local user_data_size=$(recalc_userdata_size)
+        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            make_ubi_image_for_nand ${BOARD_NAME} userdata
+        else
+            make_ext4 ${BOARD_NAME} userdata ${user_data_size}
         fi
 
         flash userdata ${RESULT_DIR}/userdata.img
@@ -562,13 +594,13 @@ parse_args $@
 check_boot_device_type
 get_board_name
 get_root_device
+get_root_device_size
+
 update_partitionmap
 update_2ndboot
 update_bootloader
 change_fstab_for_sd
-if [ ${UPDATE_KERNEL} == "true" ] || [ ${APPLY_KERNEL_INIT_RAMFS} == "true" ]; then
-    apply_kernel_initramfs
-fi
+
 if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
     update_kernel
     update_bmp
@@ -581,6 +613,7 @@ else
         update_boot
     fi
 fi
+
 update_system
 update_cache
 update_userdata

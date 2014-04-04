@@ -172,7 +172,7 @@ function enable_uboot_sd_root()
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
     local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
-    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load mmc '"${root_device_num}"':1 0x48000000 uImage;bootm 0x48000000\"/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load mmc '"${root_device_num}"':1 0x48000000 uImage;ext4load mmc '"${root_device_num}"':1 0x49000000 root.img.gz;bootm 0x48000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"ext4load mmc '"${root_device_num}"':1 0x47000000 logo.bmp; drawbmp 0x47000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"ext4load mmc '"${root_device_num}"':1 0x47000000 battery.bmp; drawbmp 0x47000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"ext4load mmc '"${root_device_num}"':1 0x47000000 update.bmp; drawbmp 0x47000000\"/g' ${src_file}
@@ -192,7 +192,7 @@ function enable_uboot_nand_root()
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_NAND/#define CONFIG_CMD_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_UBIFS/#define CONFIG_CMD_UBIFS/g' ${src_file}
-    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"nand read 0x48000000 0xc00000 0x600000;bootm 0x48000000\"/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"nand read 0x48000000 0xc00000 0x600000;nand read 0x49000000 0x1800000 0x100000;bootm 0x48000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"nand read 0x47000000 0x2000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"nand read 0x47000000 0x2800000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
     sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"nand read 0x47000000 0x3000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
@@ -451,7 +451,6 @@ function make_android_root()
 
     cd ..
     rm -f root.img.gz
-    ${TOP}/device/nexell/tools/mkramdisk.sh root 2
     cd ${TOP}
 }
 
@@ -530,6 +529,7 @@ function build_android()
         check_result "build-android"
 
         make_android_root
+
         refine_android_system
 
         restore_patch
@@ -549,10 +549,9 @@ function make_boot()
 
     copy_bmp_files_to_boot ${BOARD_NAME}
 
-    #cp ${out_dir}/root.img.gz ${RESULT_DIR}/boot
     cp -a ${out_dir}/root ${RESULT_DIR}
-
-    apply_kernel_initramfs
+    ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
+    cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot

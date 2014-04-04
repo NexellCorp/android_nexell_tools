@@ -133,17 +133,33 @@ function is_valid_number()
     fi
 }
 
+function get_partition_size()
+{
+    local board_name=${1}
+    local partition_name=${2}
+    local src_file=${TOP}/device/nexell/${board_name}/BoardConfig.mk
+    local partition_name_upper=$(echo ${partition_name} | tr '[[:lower:]]' '[[:upper:]]')
+    local partition_size=$(grep "BOARD_${partition_name_upper}IMAGE_PARTITION_SIZE" ${src_file} | awk '{print $3}')
+    echo -n "${partition_size}"
+}
+
 # make ext4 image by android tool 'mkuserimg.sh'
 # arg1 : board name
 # arg2 : partition name
+# option arg3 : partition size
 function make_ext4()
 {
     local board_name=${1}
     local partition_name=${2}
+    local partition_size=
 
-    local src_file=${TOP}/device/nexell/${board_name}/BoardConfig.mk
-    local partition_name_upper=$(echo ${partition_name} | tr '[[:lower:]]' '[[:upper:]]')
-    local partition_size=$(grep "BOARD_${partition_name_upper}IMAGE_PARTITION_SIZE" ${src_file} | awk '{print $3}')
+    if [ ! -z $3 ]; then
+        partition_size=${3}
+    else
+        local src_file=${TOP}/device/nexell/${board_name}/BoardConfig.mk
+        local partition_name_upper=$(echo ${partition_name} | tr '[[:lower:]]' '[[:upper:]]')
+        partition_size=$(grep "BOARD_${partition_name_upper}IMAGE_PARTITION_SIZE" ${src_file} | awk '{print $3}')
+    fi
 
     vmsg "partition name: ${partition_name}, partition name upper: ${partition_name_upper}, partition_size: ${partition_size}"
 
@@ -445,4 +461,109 @@ function get_sd_device_number()
     echo "${dev_num}"
 }
 
+function is_valid_uImage()
+{
+    local uImage=${1}
+    local magicword1=$(dd if=${uImage} ibs=1 count=4 | hexdump -v -e '4/1 "%02X"')
+    if [ ${magicword1} == '27051956' ]; then
+        echo -n "true"
+    else
+        echo -n "false"
+    fi
+}
+
+function get_zImage()
+{
+     local uImage=${1}
+     local zImage=/tmp/zImage
+     dd if=${uImage} of=${zImage} bs=64 skip=1 2>/dev/null >/dev/null
+     echo -n "${zImage}"
+}
+
+function ungzip_kernel()
+{
+     local zImage=${1}
+     local image_gz=/tmp/kernel_image.gz
+     local image=/tmp/kernel_image
+     local pos=$(grep -P -a -b -m 1 --only-matching '\x1F\x8B\x08' $zImage | cut -f 1 -d :)
+     if [ ! -z ${pos} ]; then
+         dd if=${zImage} of=${image_gz} bs=1 skip=$pos 2>/dev/null >/dev/null
+         gunzip -qf ${image_gz}
+         echo -n "${image}"
+     else
+         echo -n "false"
+     fi
+}
+
+function replace_uImage_initramfs()
+{
+    local src_kernel_image=${1}
+    local replace_initramfs=${2}
+
+    echo "src_kernel_image: ${src_kernel_image}, replace_initramfs: ${replace_initramfs}"
+    if [ -z ${src_kernel_image} ] || [ -z ${replace_initramfs} ]; then
+        echo "usage: replace_uImage_initramfs uImage_file initramfs_file"
+        echo -n "false"
+        return
+    fi
+
+    if [ ! -f ${src_kernel_image} ] || [ ! -f ${replace_initramfs} ]; then
+        echo "invalid argument: check uImage(${src_kernel_image}) or initramfs(${replace_initramfs})"
+        echo -n "false"
+        return
+    fi
+
+    # checking valid uImage
+    local is_uImage=$(is_valid_uImage ${src_kernel_image})
+    if [ ${is_uImage} == "false" ]; then
+        echo "${src_kernel_image} is not valid uImage"
+        echo -n "false"
+        return
+    fi
+    local zImage=$(get_zImage ${src_kernel_image})
+    echo "zImage: ${zImage}"
+    local image=$(ungzip_kernel ${zImage})
+    echo "image: ${image}"
+
+    if [ ${image} == "false" ]; then
+        echo "this uImage is not compressed!!!"
+        mv ${zImage} /tmp/kernel_image
+        image=/tmp/kernel_image
+    fi
+
+    local cpio_start=$(grep -a -b -m 1 --only-matching '070701' ${image} | head -1 | cut -f 1 -d :)
+    local cpio_end=$(grep -a -b -m 1 -o -P '\x54\x52\x41\x49\x4C\x45\x52\x21\x21\x21\x00\x00\x00\x00' ${image} | head -1 | cut -f 1 -d :)
+    cpio_end=$((cpio_end + 14))
+    local cpio_size=$((cpio_end - cpio_start))
+    echo "cpio_start: ${cpio_start}, cpio_end: ${cpio_end}, cpio_size: ${cpio_size}"
+    if [ ${cpio_size} -le '0' ]; then
+        echo "This kernel image doesn't have initramfs!!!(${src_kernel_image})"
+        echo -n "false"
+        return
+    fi
+
+    local new_initramfs_size=$(ls -l ${replace_initramfs} | awk '{print $5}')
+    if [ ${new_initramfs_size} -gt ${cpio_size} ]; then
+        echo "replace initramfs size exceeds $((new_initramfs_size - cpio_size)) bytes!"
+        echo -n "false"
+        return
+    fi
+
+    local cpio_padding=$((cpio_size - new_initramfs_size))
+    echo "cpio_padding: ${cpio_padding}"
+    #dd if=/dev/zero bs=1 count=${cpio_padding} >> ${replace_initramfs} 2>/dev/null >/dev/null
+    echo "padding to ${replace_initramfs} size ${cpio_padding}"
+    dd if=/dev/zero bs=1 count=${cpio_padding} >> ${replace_initramfs}
+
+    local image_new=/tmp/image_new
+    #dd if=${image} bs=1 count=${cpio_start} of=${image_new} 2>/dev/null >/dev/null
+    dd if=${image} bs=1 count=${cpio_start} of=${image_new}
+    cat ${replace_initramfs} >> ${image_new}
+    dd if=${image} bs=1 skip=${cpio_end} >> ${image_new}
+
+    mkimage -A arm -O linux -T kernel -C none -a 40008000 -e 40008000 -d ${image_new} -n pyrope-linux-3.4.5+ ${src_kernel_image}
+    #mkimage -A arm -O linux -T kernel -C none -a 40008000 -e 40008000 -d ${image} -n pyrope-linux-3.4.5+ ${src_kernel_image}
+    #mkimage -A arm -O linux -T kernel -C none -a 40008000 -e 40008000 -d ${TOP}/kernel/arch/arm/boot/Image -n pyrope-linux-3.4.5+ ${src_kernel_image}
+    echo -n "true"
+}
 
