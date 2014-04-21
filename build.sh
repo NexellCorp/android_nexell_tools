@@ -352,7 +352,7 @@ function build_kernel()
 
         if [ ! -e ${TOP}/kernel ]; then
             cd ${TOP}
-            ln -s linux/kernel/kernel-3.4.x kernel
+            ln -s linux/kernel/kernel-3.4.39 kernel
         fi
 
         cd ${TOP}/kernel
@@ -515,6 +515,39 @@ function restore_patch()
     cd ${TOP}
 }
 
+function apply_kernel_headers()
+{
+    # make install kernel header
+    #local tmp_install_header=/tmp/install_headers
+    #mkdir -p ${tmp_install_header}
+    #cd ${TOP}/kernel
+    #make headers_install ARCH=arm INSTALL_HDR_PATH=${tmp_install_header}
+    #cd ${TOP}
+    #local header_dir=${tmp_install_header}/include
+
+    #local asm_arm_header_dir=${tmp_install_header}/include/asm
+    local android_kernel_header=${TOP}/external/kernel-headers/original
+    #cp -a ${asm_arm_header_dir}/* ${android_kernel_header}/asm-arm
+    #cp -a ${header_dir}/asm-generic/* ${android_kernel_header}/asm-generic
+    #cp -a ${header_dir}/linux/* ${android_kernel_header}/linux
+    ##cp -a ${header_dir}/media/* ${android_kernel_header}/media
+    #cp -a ${header_dir}/mtd/* ${android_kernel_header}/mtd
+    #cp -a ${header_dir}/sound/* ${android_kernel_header}/sound
+    ##cp -a ${header_dir}/uapi/* ${android_kernel_header}/uapi
+    #cp -a ${header_dir}/video/* ${android_kernel_header}/video
+    cp kernel/include/linux/ion.h ${android_kernel_header}/linux
+    ${TOP}/bionic/libc/kernel/tools/update_all.py
+}
+
+function apply_kernel_ion_header()
+{
+    local kernel_ion_header=kernel/include/linux/ion.h
+    local bionic_ion_header=bionic/libc/kernel/common/linux/ion.h
+    local libion=system/core/libion/ion.c
+    cp ${kernel_ion_header} ${bionic_ion_header}
+    sed -i 's/heap_mask/heap_id_mask/g' ${libion}
+}
+
 function build_android()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_ANDROID} == "true" ]; then
@@ -523,7 +556,11 @@ function build_android()
         echo "build android"
         echo "=============================================="
 
-        patch_android
+        #apply_kernel_headers
+        #patch_android
+
+        apply_kernel_ion_header
+        #echo "end apply ion header"
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug
         check_result "build-android"
@@ -532,7 +569,7 @@ function build_android()
 
         refine_android_system
 
-        restore_patch
+        #restore_patch
 
         echo "---------- End of build android"
     fi
