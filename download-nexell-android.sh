@@ -2,27 +2,25 @@
 
 set -e
 
-DEVEL_SERVER_URL="ssh://git@210.219.52.221:9999/nexell/pyrope/android/manifest"
-OPEN_SERVER_URL="git://210.219.52.221/nexell/pyrope/android/manifest"
+JB_SERVER_URL="git://210.219.52.221/nexell/pyrope/android/manifest"
+KITKAT_SERVER_URL="git://git.nexell.co.kr/nexell/android/kitkat/manifest"
 DIR=nexell-android
 
 usage()
 {
-    echo 'Usage: $0 -s <server(devel/open)> -v <android version name(jb/kitkat)> [ -d directory ]'
-    echo -e '\n -s <server> : devel or open'
-    echo " -v <android version name> : jb or kitkat"
+    echo 'Usage: $0 -v <android version name(jb/kitkat)> [ -d directory ]'
+    echo -e '\n -v <android version name> : jb or kitkat'
     echo " -d <directory> : The directory to download code, Default: ${DIR}"
     exit 1
 }
 
 function parse_args()
 {
-    TEMP=`getopt -o "s:v:d:h" -- "$@"`
+    TEMP=`getopt -o "v:d:h" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
         case $1 in
-            -s  ) SERVER=$2; shift 2 ;;
             -v  ) VERSION=$2; shift 2 ;;
             -d  ) DIR=$2; shift 2 ;;
             -h  ) usage; exit 1;;
@@ -31,25 +29,14 @@ function parse_args()
     done
 }
 
-function check_server()
-{
-    if [ ${SERVER} == "devel" ]; then
-        SERVER=${DEVEL_SERVER_URL}
-    elif [ ${SERVER} == "open" ]; then
-        SERVER=${OPEN_SERVER_URL}
-    else
-        echo "Invalid server name: ${SERVER}"
-        usage
-        exit 1
-    fi
-}
-
 function check_android_version()
 {
     if [ ${VERSION} == "jb" ]; then
         VERSION="jb-mr1.1"
+        SERVER=${JB_SERVER_URL}
     elif [ ${VERSION} == "kitkat" ]; then
-        VERSION="kitkat-release"
+        VERSION="kitkat-mr1-pyrope"
+        SERVER=${KITKAT_SERVER_URL}
     else
         usage
         exit 1
@@ -146,7 +133,6 @@ function download_source()
 }
 
 parse_args $@
-check_server
 check_download_dir
 check_android_version
 download_repo
