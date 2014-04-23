@@ -14,7 +14,7 @@ BUILD_ANDROID=false
 CLEAN_BUILD=false
 ROOT_DEVICE_TYPE=sd
 WIFI_DEVICE_NAME=rtl8188
-WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_rtl8189ES_linux_v4.1.6_7546.20130521"
+WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
 VERBOSE=false
 
 BOARD_NAME=
