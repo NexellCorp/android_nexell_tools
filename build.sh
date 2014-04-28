@@ -553,6 +553,11 @@ function apply_kernel_ion_header()
     sed -i 's/heap_mask/heap_id_mask/g' ${libion}
 }
 
+function build_cts()
+{
+    make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug cts
+}
+
 function build_android()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_ANDROID} == "true" ]; then
@@ -561,18 +566,17 @@ function build_android()
         echo "build android"
         echo "=============================================="
 
-        #apply_kernel_headers
         patch_android
 
         apply_kernel_ion_header
-        #echo "end apply ion header"
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug
         check_result "build-android"
 
         make_android_root
-
         refine_android_system
+
+        build_cts
 
         restore_patch
 
