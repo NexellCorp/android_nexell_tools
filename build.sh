@@ -473,6 +473,11 @@ function apply_android_overlay()
     done < ${overlay_list_file}
 }
 
+function remove_android_banned_files()
+{
+    rm -f ${RESULT_DIR}/system/xbin/su
+}
+
 function refine_android_system()
 {
     local out_dir=${TOP}/out/target/product/${BOARD_NAME}
@@ -510,7 +515,7 @@ function restore_patch()
         dst_dir=$(echo ${line} | awk '{print $2}')
         echo "restore ${TOP}/${dst_dir}/${src_file}"
         cd ${TOP}/${dst_dir}
-        git checkout ${src_file}
+        git status | grep -q Untracked || git checkout ${src_file}
     done < ${patch_list_file}
     cd ${TOP}
 }
@@ -603,9 +608,11 @@ function make_system()
     cp -a ${out_dir}/system ${RESULT_DIR}
 
     apply_android_overlay
+    remove_android_banned_files
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-        cp ${out_dir}/system.img ${RESULT_DIR}
+        #cp ${out_dir}/system.img ${RESULT_DIR}
+        make_ext4 ${BOARD_NAME} system
     else
         make_ubi_image_for_nand ${BOARD_NAME} system
     fi
