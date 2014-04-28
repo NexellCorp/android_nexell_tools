@@ -557,7 +557,7 @@ function build_android()
         echo "=============================================="
 
         #apply_kernel_headers
-        #patch_android
+        patch_android
 
         apply_kernel_ion_header
         #echo "end apply ion header"
@@ -569,7 +569,7 @@ function build_android()
 
         refine_android_system
 
-        #restore_patch
+        restore_patch
 
         echo "---------- End of build android"
     fi
