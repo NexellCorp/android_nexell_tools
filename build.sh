@@ -11,9 +11,12 @@ BUILD_UBOOT=false
 BUILD_KERNEL=false
 BUILD_MODULE=false
 BUILD_ANDROID=false
+BUILD_DIST=false
 CLEAN_BUILD=false
 ROOT_DEVICE_TYPE=sd
 WIFI_DEVICE_NAME=rtl8188
+#BUILD_TAG=user
+BUILD_TAG=userdebug
 WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
 VERBOSE=false
 
@@ -29,7 +32,7 @@ function check_top()
 
 function usage()
 {
-    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -t u-boot -t kernel -t module -t android]"
+    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -t u-boot -t kernel -t module -t android -t dist]"
     echo -e '\n -b <board-name> : target board name (available boards: "'"$(get_available_board)"'")'
     echo " -r <root-device-type> : your root device type(sd, nand, usb), default sd"
     echo " -c : clean build, default no"
@@ -39,6 +42,7 @@ function usage()
     echo " -t kernel  : if you want to build kernel, specify this, default yes"
     echo " -t module  : if you want to build driver modules, specify this, default yes"
     echo " -t android : if you want to build android, specify this, default yes"
+    echo " -t dist    : if you want to build distribute image, specify this, default no"
     echo " -t none    : if you want to only post process, specify this, default no"
 }
 
@@ -58,6 +62,7 @@ function parse_args()
                     kernel  ) BUILD_ALL=false; BUILD_KERNEL=true ;;
                     module  ) BUILD_ALL=false; BUILD_MODULE=true ;;
                     android ) BUILD_ALL=false; BUILD_ANDROID=true ;;
+                    dist    ) BUILD_ALL=false; BUILD_DIST=true ;;
                     none    ) BUILD_ALL=false ;;
                  esac
                  shift 2 ;;
@@ -91,6 +96,9 @@ function print_args()
             fi
             if [ ${BUILD_ANDROID} == "true" ]; then
                 echo -e "Build:\t\t\tandroid"
+            fi
+            if [ ${BUILD_DIST} == "true" ]; then
+                echo -e "Build:\t\t\tdistribution"
             fi
         fi
         echo -e "ROOT_DEVICE_TYPE:\t${ROOT_DEVICE_TYPE}"
@@ -555,7 +563,7 @@ function apply_kernel_ion_header()
 
 function build_cts()
 {
-    make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug cts
+    make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} cts
 }
 
 function build_android()
@@ -570,17 +578,68 @@ function build_android()
 
         apply_kernel_ion_header
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-userdebug
+        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
         check_result "build-android"
 
         make_android_root
         refine_android_system
 
-        build_cts
+        #build_cts
 
         restore_patch
 
         echo "---------- End of build android"
+    fi
+}
+
+function build_dist()
+{
+    if [ ${BUILD_DIST} == "true" ]; then
+        echo ""
+        echo "=============================================="
+        echo "build dist"
+        echo "=============================================="
+
+        echo "key generation ===> "
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/media.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh media pyxis
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh platform pyxis
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release pyxis
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared pyxis
+
+        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
+
+        # date +%Y%m%d%H%M
+        cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.swpark.zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
+
+        local tmpdir=${RESULT_DIR}/tmp
+        rm -rf ${tmpdir}
+        rm -f ${RESULT_DIR}/target.zip
+        mkdir -p ${tmpdir}
+        unzip -o -q ${RESULT_DIR}/${BOARD_NAME}-target_files.zip -d ${tmpdir}
+        mkdir -p ${tmpdir}/BOOTABLE_IMAGES/
+        cp ${RESULT_DIR}/boot.img ${tmpdir}/BOOTABLE_IMAGES
+        mkdir -p ${tmpdir}/RADIO
+        cp device/nexell/${BOARD_NAME}/boot/2ndboot.bin ${tmpdir}/RADIO/2ndbootloader
+        cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
+        cd ${tmpdir}
+        zip -r -q ../target *
+        cd ${TOP}
+        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/pyxis/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota.zip
+
+        #${TOP}/build/tools/releasetools/sign_target_files_apks -d ${TOP}/vendor/nexell/security/${BOARD_NAME} ${RESULT_DIR}/${BOARD_NAME}-target_files.zip ${RESULT_DIR}/signed-target-files.zip
+        #${TOP}/build/tools/releasetools/img_from_target_files ${RESULT_DIR}/signed-target-files.zip ${RESULT_DIR}/signed-img.zip
+        #local tmpdir=${RESULT_DIR}/tmp
+        #rm -rf ${tmpdir}
+        #mkdir -p ${tmpdir}
+        #unzip ${RESULT_DIR}/signed-target-files.zip -d ${tmpdir}
+        #cp -a ${tmpdir}/SYSTEM/build.prop ${RESULT_DIR}/system
+        #cp -a ${tmpdir}/SYSTEM/framework/* ${RESULT_DIR}/system/framework
+        #cp -a ${tmpdir}/SYSTEM/app/* ${RESULT_DIR}/system/app
+        #cp -a ${tmpdir}/SYSTEM/priv-app/* ${RESULT_DIR}/system/priv-app
+        #rm -rf ${tmpdir}
+        #make_ext4 ${BOARD_NAME} system
+
+        echo "---------- End of build dist"
     fi
 }
 
@@ -598,6 +657,7 @@ function make_boot()
     cp -a ${out_dir}/root ${RESULT_DIR}
     ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
     cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
+    cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
@@ -612,7 +672,7 @@ function make_system()
     cp -a ${out_dir}/system ${RESULT_DIR}
 
     apply_android_overlay
-    remove_android_banned_files
+    #remove_android_banned_files
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         #cp ${out_dir}/system.img ${RESULT_DIR}
@@ -651,29 +711,31 @@ function make_userdata()
 
 function post_process()
 {
-    echo ""
-    echo "=============================================="
-    echo "post processing"
-    echo "=============================================="
+    if [ ${BUILD_DIST} == "false" ]; then
+        echo ""
+        echo "=============================================="
+        echo "post processing"
+        echo "=============================================="
 
-    local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
-    echo ${out_dir}
+        local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+        echo ${out_dir}
 
-    rm -rf ${RESULT_DIR}
-    mkdir -p ${RESULT_DIR}
+        rm -rf ${RESULT_DIR}
+        mkdir -p ${RESULT_DIR}
 
-    cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
+        cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
 
-    if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        query_nand_sizes ${BOARD_NAME}
+        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            query_nand_sizes ${BOARD_NAME}
+        fi
+
+        make_boot
+        make_system
+        make_cache
+        make_userdata
+
+        echo "---------- End of post processing"
     fi
-
-    make_boot
-    make_system
-    make_cache
-    make_userdata
-
-    echo "---------- End of post processing"
 }
 
 check_top
@@ -691,3 +753,4 @@ build_kernel
 build_module
 build_android
 post_process
+build_dist

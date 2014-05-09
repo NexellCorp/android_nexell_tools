@@ -292,7 +292,7 @@ function update_2ndboot()
         local option_d=other
         local option_p=
         case ${BOOT_DEVICE_TYPE} in
-            spirom) 
+            spirom)
                 secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_spi.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_spi.txt
                 ;;
@@ -325,6 +325,9 @@ function update_2ndboot()
         flash 2ndboot ${secondboot_out_file}
         #flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
         NSIH_FILE=${nsih_file}
+
+        mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
+        cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
     fi
 }
 
