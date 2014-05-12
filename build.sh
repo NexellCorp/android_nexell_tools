@@ -574,6 +574,12 @@ function build_android()
         echo "build android"
         echo "=============================================="
 
+        echo "key generation for ${BOARD_NAME}"
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/media.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh media ${BOARD_NAME}
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && $(${TOP}/device/nexell/tools/mkkey.sh platform ${BOARD_NAME})
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
+
         patch_android
 
         apply_kernel_ion_header
@@ -600,11 +606,7 @@ function build_dist()
         echo "build dist"
         echo "=============================================="
 
-        echo "key generation ===> "
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/media.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh media pyxis
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh platform pyxis
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release pyxis
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared pyxis
+        patch_android
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
@@ -624,7 +626,7 @@ function build_dist()
         cd ${tmpdir}
         zip -r -q ../target *
         cd ${TOP}
-        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/pyxis/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota.zip
+        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota.zip
 
         #${TOP}/build/tools/releasetools/sign_target_files_apks -d ${TOP}/vendor/nexell/security/${BOARD_NAME} ${RESULT_DIR}/${BOARD_NAME}-target_files.zip ${RESULT_DIR}/signed-target-files.zip
         #${TOP}/build/tools/releasetools/img_from_target_files ${RESULT_DIR}/signed-target-files.zip ${RESULT_DIR}/signed-img.zip
@@ -638,6 +640,8 @@ function build_dist()
         #cp -a ${tmpdir}/SYSTEM/priv-app/* ${RESULT_DIR}/system/priv-app
         #rm -rf ${tmpdir}
         #make_ext4 ${BOARD_NAME} system
+
+        restore_patch
 
         echo "---------- End of build dist"
     fi

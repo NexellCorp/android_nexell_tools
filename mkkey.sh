@@ -14,11 +14,10 @@ DIR=vendor/nexell/security/$2
 
 mkdir -p ${DIR}
 
-#openssl genrsa -3 -out ${DIR}/${NAME}.pem 2048
+openssl genrsa -3 -out ${DIR}/${NAME}.pem 2048
 
-#openssl req -new -x509 -key ${DIR}/${NAME}.pem -out ${DIR}/${NAME}.x509.pem -days 10000 -subj "$AUTH"
+openssl req -new -x509 -sha1 -key ${DIR}/${NAME}.pem -out ${DIR}/${NAME}.x509.pem -days 10000 -subj "$AUTH"
 
-#echo "Please enter the password for this key:"
-#openssl pkcs8 -in ${DIR}/${NAME}.pem -topk8 -outform DER -out ${DIR}/${NAME}.pk8 -passout stdin
+openssl pkcs8 -in ${DIR}/${NAME}.pem -topk8 -outform DER -out ${DIR}/${NAME}.pk8 -nocrypt
 
-development/tools/make_key ${DIR}/${NAME} ${AUTH}
+#development/tools/make_key ${DIR}/${NAME} ${AUTH}
