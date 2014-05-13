@@ -579,6 +579,7 @@ function build_android()
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && $(${TOP}/device/nexell/tools/mkkey.sh platform ${BOARD_NAME})
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/testkey.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh testkey ${BOARD_NAME}
 
         patch_android
 
