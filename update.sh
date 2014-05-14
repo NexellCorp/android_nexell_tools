@@ -251,10 +251,12 @@ function create_partmap_for_spirom()
         echo "flash=nand,0:userdata:ubi:0x34000000,0x0;" >> ${partmap_file}
     else
         local dev_num=${ROOT_DEVICE_TYPE#sd}
-        echo "flash=mmc,${dev_num}:boot:ext4:0x000100000,0x004000000;" >> ${partmap_file}
-        echo "flash=mmc,${dev_num}:system:ext4:0x004100000,0x028E00000;" >> ${partmap_file}
-        echo "flash=mmc,${dev_num}:cache:ext4:0x02CF00000,0x21000000;" >> ${partmap_file}
-        echo "flash=mmc,${dev_num}:userdata:ext4:0x4df00000,0x0;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:boot:ext4:0x00100000,0x04000000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:system:ext4:0x04100000,0x28E00000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:cache:ext4:0x2CF00000,0x21000000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:misc:emmc:0x4E000000,0x00800000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:recovery:emmc:0x4E900000,0x01600000;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:userdata:ext4:0x50000000,0x0;" >> ${partmap_file}
     fi
 }
 
@@ -568,7 +570,10 @@ function recalc_userdata_size()
     local boot_size=$(get_partition_size ${BOARD_NAME} boot)
     local system_size=$(get_partition_size ${BOARD_NAME} system)
     local cache_size=$(get_partition_size ${BOARD_NAME} cache)
-    local user_data_size=$((ROOT_DEVICE_SIZE - boot_size - system_size - cache_size - (1024*1024)))
+    local misc_size=0x800000
+    local recovery_size=0x1600000
+    local extpartinfo_size=0x300000
+    local user_data_size=$((ROOT_DEVICE_SIZE - boot_size - system_size - cache_size - misc_size - recovery_size - extpartinfo_size - (1024*1024)))
     echo -n "${user_data_size}"
 }
 
