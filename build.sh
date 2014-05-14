@@ -566,6 +566,13 @@ function build_cts()
     make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} cts
 }
 
+function sign_system_private_app()
+{
+    java -jar out/host/linux-x86/framework/signapk.jar vendor/nexell/security/${BOARD_NAME}/platform.x509.pem vendor/nexell/security/${BOARD_NAME}/platform.pk8 out/target/product/${BOARD_NAME}/system/app/OTAUpdateCenter.apk /tmp/OTAUpdateCenter.apk
+    mv /tmp/OTAUpdateCenter.apk out/target/product/${BOARD_NAME}/system/app/
+    sync
+}
+
 function build_android()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_ANDROID} == "true" ]; then
@@ -579,6 +586,7 @@ function build_android()
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && $(${TOP}/device/nexell/tools/mkkey.sh platform ${BOARD_NAME})
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
         [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
+        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/testkey.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh testkey ${BOARD_NAME}
 
         patch_android
 
@@ -589,6 +597,8 @@ function build_android()
 
         make_android_root
         refine_android_system
+
+        #sign_system_private_app
 
         #build_cts
 
@@ -610,7 +620,6 @@ function build_dist()
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
-        # date +%Y%m%d%H%M
         cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.swpark.zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
 
         local tmpdir=${RESULT_DIR}/tmp
@@ -620,26 +629,17 @@ function build_dist()
         unzip -o -q ${RESULT_DIR}/${BOARD_NAME}-target_files.zip -d ${tmpdir}
         mkdir -p ${tmpdir}/BOOTABLE_IMAGES/
         cp ${RESULT_DIR}/boot.img ${tmpdir}/BOOTABLE_IMAGES
+        cp out/target/product/${BOARD_NAME}/recovery.img ${tmpdir}/BOOTABLE_IMAGES
         mkdir -p ${tmpdir}/RADIO
         cp device/nexell/${BOARD_NAME}/boot/2ndboot.bin ${tmpdir}/RADIO/2ndbootloader
         cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
         cd ${tmpdir}
         zip -r -q ../target *
         cd ${TOP}
-        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota.zip
-
-        #${TOP}/build/tools/releasetools/sign_target_files_apks -d ${TOP}/vendor/nexell/security/${BOARD_NAME} ${RESULT_DIR}/${BOARD_NAME}-target_files.zip ${RESULT_DIR}/signed-target-files.zip
-        #${TOP}/build/tools/releasetools/img_from_target_files ${RESULT_DIR}/signed-target-files.zip ${RESULT_DIR}/signed-img.zip
-        #local tmpdir=${RESULT_DIR}/tmp
-        #rm -rf ${tmpdir}
-        #mkdir -p ${tmpdir}
-        #unzip ${RESULT_DIR}/signed-target-files.zip -d ${tmpdir}
-        #cp -a ${tmpdir}/SYSTEM/build.prop ${RESULT_DIR}/system
-        #cp -a ${tmpdir}/SYSTEM/framework/* ${RESULT_DIR}/system/framework
-        #cp -a ${tmpdir}/SYSTEM/app/* ${RESULT_DIR}/system/app
-        #cp -a ${tmpdir}/SYSTEM/priv-app/* ${RESULT_DIR}/system/priv-app
-        #rm -rf ${tmpdir}
-        #make_ext4 ${BOARD_NAME} system
+        cp build/tools/releasetools/common.py /tmp/
+        cp device/nexell/tools/common.py build/tools/releasetools/
+        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota-${BOARD_NAME}-$(date +%Y%m%d-%H%M).zip
+        mv /tmp/common.py build/tools/releasetools/
 
         restore_patch
 
@@ -662,6 +662,8 @@ function make_boot()
     ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
     cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
     cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
+
+    cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
