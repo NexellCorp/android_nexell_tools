@@ -15,9 +15,13 @@ fi
 
 pushd $(pwd)
 cd ${SOURCE_DIR}
-find . | cpio -H newc -o > /tmp/initramfs.cpio
+random=$(echo $$ | md5sum | md5sum)
+tmpfile="initramfs.cpio.${random:2:8}"
+find . | cpio -H newc -o > /tmp/${tmpfile}
 popd
+echo "tmpfile: ${tmpfile}"
 out_file="$(realpath ${TARGET_DIR})/$(basename ${SOURCE_DIR}).img.gz"
 echo "out_file: ${out_file}"
-cat /tmp/initramfs.cpio | gzip > ${out_file}
+cat /tmp/${tmpfile} | gzip > ${out_file}
+rm -f /tmp/${tmpfile}
 echo "make success: ${out_file}"
