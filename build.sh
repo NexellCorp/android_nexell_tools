@@ -628,6 +628,17 @@ function build_dist()
         mkdir -p ${tmpdir}
         unzip -o -q ${RESULT_DIR}/${BOARD_NAME}-target_files.zip -d ${tmpdir}
         mkdir -p ${tmpdir}/BOOTABLE_IMAGES/
+        local otaver=$(cat device/nexell/${BOARD_NAME}/otaver)
+        otaver=$((otaver+1))
+        sed -i "s/setprop otaupdater.otaver.*/setprop otaupdater.otaver ${otaver}/g" ${RESULT_DIR}/root/init.${BOARD_NAME}.rc
+        local release_date=$(date +%Y%m%d-%H%M)
+        sed -i "s/setprop otaupdater.otatime.*/setprop otaupdater.otatime ${release_date}/g" ${RESULT_DIR}/root/init.${BOARD_NAME}.rc
+        ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
+        cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
+        cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
+        if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+            make_ext4 ${BOARD_NAME} boot
+        fi
         cp ${RESULT_DIR}/boot.img ${tmpdir}/BOOTABLE_IMAGES
         cp out/target/product/${BOARD_NAME}/recovery.img ${tmpdir}/BOOTABLE_IMAGES
         mkdir -p ${tmpdir}/RADIO
@@ -638,10 +649,22 @@ function build_dist()
         cd ${TOP}
         cp build/tools/releasetools/common.py /tmp/
         cp device/nexell/tools/common.py build/tools/releasetools/
-        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/ota-${BOARD_NAME}-$(date +%Y%m%d-%H%M).zip
+        local ota_name="ota-${BOARD_NAME}-${release_date}.zip"
+        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
         mv /tmp/common.py build/tools/releasetools/
 
         restore_patch
+
+        local ota_desc=${RESULT_DIR}/OTA_DESC
+        echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 4.4.2 KOT49H ${release_date}" > ${ota_desc}
+        echo "Rom ID: nexell_pyrope_${BOARD_NAME}_kk" >> ${ota_desc}
+        echo -e ${otaver} | awk '{print "Rom Version: " $1}' >> ${ota_desc}
+        echo "Rom Date: ${release_date}" >> ${ota_desc}
+        echo "Download URL: http://git.nexell.co.kr/_builds/${ota_name}" >> ${ota_desc}
+        md5sum ${RESULT_DIR}/${ota_name} | awk '{print "MD5 Checksum: " $1}' >> ${ota_desc}
+        echo "Device(code)name: ${BOARD_NAME}" >> ${ota_desc}
+
+        echo -e ${otaver} > device/nexell/${BOARD_NAME}/otaver
 
         echo "---------- End of build dist"
     fi
