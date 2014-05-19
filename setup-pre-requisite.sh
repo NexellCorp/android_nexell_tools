@@ -11,7 +11,7 @@ else
     exit 1
 fi
 
-if [[ ${UBUNTU} =~ "13." || ${UBUNTU} =~ "12.10" ]]; then
+if [[ ${UBUNTU} =~ "14." || ${UBUNTU} =~ "13." || ${UBUNTU} =~ "12.10" ]]; then
     #Install basic dev package missing in chrooted environments
     sudo apt-get install software-properties-common
     sudo dpkg --add-architecture i386
@@ -25,7 +25,7 @@ elif [[ ${UBUNTU} =~ "12.04" || ${UBUNTU} =~ "10.04" ]] ; then
        PKGS+=' ia32-libs libssl-dev libcurl4-gnutls-dev libexpat1-dev gettext'
     fi
 else
-    echo "ERROR: Only Ubuntu 10.04, 12.* and 13.* versions are supported."
+    echo "ERROR: Only Ubuntu 10.04, 12.*, 13.* and 14.* versions are supported."
     exit 1
 fi
 
