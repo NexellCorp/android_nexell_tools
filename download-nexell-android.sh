@@ -64,7 +64,7 @@ function download_repo()
         mkdir -p ~/bin
         curl http://commondatastorage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
         chmod a+x ~/bin/repo
-        echo "export PATH=$PATH:~/bin" >> ~/.bashrc
+        echo "export PATH=\$PATH:${HOME}/bin" >> ~/.bashrc
         source ~/.bashrc
     fi
 }
