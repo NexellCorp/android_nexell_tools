@@ -88,6 +88,8 @@ if [ -z "${JAVA_VERSION}" ] || [ -n "${IS_OPEN_JDK}" ]; then
         echo "failed to install javac 1.6.0_34"
         exit 1
     fi
+
+    javaws | grep 1.6.0_34 || echo "failed to check version of javaws" && exit 1
 fi
 
 echo "Setup Complete!!!"
