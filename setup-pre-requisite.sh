@@ -5,7 +5,7 @@
 UBUNTU=`cat /etc/issue.net | cut -d' ' -f2`
 HOST_ARCH=`uname -m`
 if [ ${HOST_ARCH} == "x86_64" ] ; then
-    PKGS='gnupg flex bison gperf build-essential zip curl zlib1g-dev libc6-dev lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown libxml2-utils xsltproc u-boot-tools openjdk-6-jdk openjdk-6-jre vim-common python-parted python-yaml wget'
+    PKGS='gnupg flex bison gperf build-essential zip curl zlib1g-dev libc6-dev lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown libxml2-utils xsltproc u-boot-tools openjdk-6-jdk openjdk-6-jre vim-common python-parted python-yaml wget realpath'
 else
     echo "ERROR: Only 64bit Host(Build) machines are supported at the moment."
     exit 1
