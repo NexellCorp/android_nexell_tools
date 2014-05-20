@@ -686,7 +686,9 @@ function make_boot()
     cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
     cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
 
-    cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
+    if [ -f ${out_dir}/ramdisk-recovery.img ]; then
+        cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
+    fi
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
