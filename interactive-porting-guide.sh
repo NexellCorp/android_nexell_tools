@@ -11,6 +11,7 @@ MAIN_SD_DEVICE_NUMBER=
 EXTERNAL_SD_DEVICE_NUMBER=
 HAS_CAMERA=
 HAS_SENSOR=
+HAS_TOUCH=
 HAS_BLUETOOTH=
 HAS_SD_STORAGE=
 HAS_USB_STORAGE=
@@ -109,6 +110,18 @@ function query_has_sensor()
         HAS_SENSOR=true
     else
         HAS_SENSOR=false
+    fi
+    vmsg "HAS_SENSOR: ${HAS_SENSOR}"
+    echo
+}
+
+function query_has_touch()
+{
+    choice "===> ${BOARD} has touch?[Y/n] : "
+    if [ ${CHOICE} == 'y' ]; then
+        HAS_TOUCH=true
+    else
+        HAS_TOUCH=false
     fi
     vmsg "HAS_SENSOR: ${HAS_SENSOR}"
     echo
@@ -283,15 +296,18 @@ print_startup
 query_target_board
 query_root_device_type
 query_root_device_size
+
 if [ ${ROOT_DEVICE_TYPE} == "sd" ]; then
     query_main_sd_device_number
 fi
 query_has_camera
 query_has_sensor
+query_has_touch
 query_has_bluetooth
 query_has_sd_storage
 query_has_usb_storage
 query_has_otg_storage
+
 if [ ${HAS_SD_STORAGE} == "true" ]; then
     query_external_sd_device_number
 fi
@@ -303,8 +319,14 @@ if [ ${HAS_CAMERA} == "true" ]; then
 fi
 
 v4l2_porting
-touch_porting
-sensor_porting
+
+if [ ${HAS_TOUCH} == "true" ]; then
+    touch_porting
+fi
+
+if [[ ${HAS_SENSOR} == "true" ]]; then
+    sensor_porting
+fi
 
 printf "%b\n" "--------------------------------------------"
 printf "%b\n" "Success Interactive Porting!!!"
