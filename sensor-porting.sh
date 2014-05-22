@@ -45,8 +45,10 @@ function is_sensor_exist()
     local src_file=${TOP}/device/nexell/${BOARD}/BoardConfig.mk
     local board_has_sensor=$(awk '/BOARD_HAS_SENSOR/ {print $3}' ${src_file})
     if [ ${board_has_sensor} == "false" ]; then
-        echo "${BOARD} don't have sensor!!!"
-        exit 1
+        #echo "${BOARD} don't have sensor!!!"
+        echo "no"
+    else
+        echo "yes"
     fi
 }
 
@@ -106,10 +108,12 @@ export VERBOSE
 query_board
 vmsg "BOARD: ${BOARD}"
 
-is_sensor_exist
-
-query_sensor_type
-vmsg "SENSOR_TYPE: ${SENSOR_TYPE}"
-check_sensor_type
-
-apply_sensor_type
+sensor_exist=is_sensor_exist
+if [[ ${sensor_exist} == "yes" ]]; then
+    query_sensor_type
+    vmsg "SENSOR_TYPE: ${SENSOR_TYPE}"
+    check_sensor_type
+    apply_sensor_type
+else
+    echo "Board doesn't have sensor!!!"
+fi
