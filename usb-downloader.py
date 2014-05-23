@@ -60,28 +60,53 @@ class UsbDownloader():
         return parser
 
     def parse_and_check_options(self, parser):
-        args = parser.parse_args()
-        if not args.bootfile or not args.downfile or not args.nsih or not args.downaddr or not args.jumpaddr:
-            print("Invalid arguments!!!")
-            raise ValueError("Invalid arguments")
+        print("parse_and_check_options")
+        try:
+            args = parser.parse_args()
+        except:
+            print("except in parse_args()")
 
+        print("args.bootfile -->" + args.bootfile)
+        print("args.downfile -->" + args.downfile)
+        print("args.downaddr -->" + args.downaddr)
+        print("args.jumpaddr -->" + args.jumpaddr)
+        print("args.nsih -->" + args.nsih)
+
+        #if not args.bootfile or not args.downfile or not args.nsih or not args.downaddr or not args.jumpaddr:
+            #print("Invalid arguments!!!")
+            #raise ValueError("Invalid arguments")
+
+        try:
+            self.boot_file = open(args.bootfile, "rb")
+        except:
+            print("except in open " + args.bootfile)
+
+        #if not self.boot_file:
+            #print("No boot file %s" % args.bootfile)
+            #raise ValueError("No boot file")
+
+        try:
+            self.download_file = open(args.downfile, "rb")
+        except:
+            print("except in open " + args.downfile)
+
+        #if not self.download_file:
+            #print("No download file %s" % args.downfile)
+            #raise ValueError("No download file")
+
+        try:
+            self.nsih_file = open(args.nsih, "r")
+        except:
+            print("except in open " + args.nsih)
+
+        #if not self.nsih_file:
+            #print("No download file %s" % args.nsih)
+            #raise ValueError("No nsih file")
+
+        print("get download_addr")
         self.download_addr = int(args.downaddr, 16)
+        print("get jump_addr")
         self.jump_addr = int(args.jumpaddr, 16)
-
-        self.boot_file = open(args.bootfile, "rb")
-        if not self.boot_file:
-            print("No boot file %s" % args.bootfile)
-            raise ValueError("No boot file")
-
-        self.download_file = open(args.downfile, "rb")
-        if not self.download_file:
-            print("No download file %s" % args.downfile)
-            raise ValueError("No download file")
-
-        self.nsih_file = open(args.nsih, "r")
-        if not self.nsih_file:
-            print("No download file %s" % args.nsih)
-            raise ValueError("No nsih file")
 
         print("===========================================")
         print("Boot File: %s" % args.bootfile)
@@ -164,8 +189,10 @@ if __name__ == '__main__':
 
     parser = me.register_options()
     try:
+        print("call parse_and_check_options")
         me.parse_and_check_options(parser)
     except:
+        print("exception in parse_and_check_options")
         sys.exit(1)
 
     del parser
