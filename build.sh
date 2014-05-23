@@ -514,18 +514,20 @@ function patch_android()
 function restore_patch()
 {
     cd ${TOP}
-    local patch_dir=${TOP}/hardware/nexell/pyrope/patch
-    local patch_list_file=${patch_dir}/files.txt
-    local src_file=""
-    local dst_dir=""
-    while read line; do
-        src_file=$(echo ${line} | awk '{print $1}')
-        dst_dir=$(echo ${line} | awk '{print $2}')
-        echo "restore ${TOP}/${dst_dir}/${src_file}"
-        cd ${TOP}/${dst_dir}
-        git status | grep -q Untracked || git checkout ${src_file}
-    done < ${patch_list_file}
-    cd ${TOP}
+    if [ -d ${TOP}/.repo ]; then
+        local patch_dir=${TOP}/hardware/nexell/pyrope/patch
+        local patch_list_file=${patch_dir}/files.txt
+        local src_file=""
+        local dst_dir=""
+        while read line; do
+            src_file=$(echo ${line} | awk '{print $1}')
+            dst_dir=$(echo ${line} | awk '{print $2}')
+            echo "restore ${TOP}/${dst_dir}/${src_file}"
+            cd ${TOP}/${dst_dir}
+            git status | grep -q Untracked || git checkout ${src_file}
+        done < ${patch_list_file}
+        cd ${TOP}
+    fi
 }
 
 function apply_kernel_headers()
