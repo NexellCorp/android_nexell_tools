@@ -19,6 +19,11 @@ WIFI_DEVICE_NAME=rtl8188
 BUILD_TAG=userdebug
 WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
 VERBOSE=false
+## OTA variables
+OTA_INCREMENTAL=false
+OTA_PREVIOUS_FILE=
+OTA_UPDATE_2NDBOOT=true
+OTA_UPDATE_UBOOT=true
 
 BOARD_NAME=
 
@@ -32,7 +37,7 @@ function check_top()
 
 function usage()
 {
-    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -t u-boot -t kernel -t module -t android -t dist]"
+    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -t u-boot -t kernel -t module -t android -t dist [-i previous_target.zip -d 2ndboot -d u-boot ]]"
     echo -e '\n -b <board-name> : target board name (available boards: "'"$(get_available_board)"'")'
     echo " -r <root-device-type> : your root device type(sd, nand, usb), default sd"
     echo " -c : clean build, default no"
@@ -42,13 +47,16 @@ function usage()
     echo " -t kernel  : if you want to build kernel, specify this, default yes"
     echo " -t module  : if you want to build driver modules, specify this, default yes"
     echo " -t android : if you want to build android, specify this, default yes"
-    echo " -t dist    : if you want to build distribute image, specify this, default no"
     echo " -t none    : if you want to only post process, specify this, default no"
+    echo " -t dist    : if you want to build distribute image, specify this, default no"
+    echo "    -i previous_target.zip : if you want incremental OTA update, specify this, default no"
+    echo "    -d 2ndboot             : if you don't want to update OTA 2ndboot, specify this, default no"
+    echo "    -d u-boot              : if you don't want to update OTA u-boot, specify this, default no"
 }
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:r:t:chv" -- "$@"`
+    TEMP=`getopt -o "b:r:t:i:d:chv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -64,6 +72,12 @@ function parse_args()
                     android ) BUILD_ALL=false; BUILD_ANDROID=true ;;
                     dist    ) BUILD_ALL=false; BUILD_DIST=true ;;
                     none    ) BUILD_ALL=false ;;
+                 esac
+                 shift 2 ;;
+            -i ) OTA_INCREMENTAL=true; OTA_PREVIOUS_FILE=$2; shift 2 ;;
+            -d ) case "$2" in
+                    2ndboot ) OTA_UPDATE_2NDBOOT=false ;;
+                    u-boot  ) OTA_UPDATE_UBOOT=false ;;
                  esac
                  shift 2 ;;
             -h ) usage; exit 1 ;;
@@ -618,9 +632,9 @@ function build_dist()
         echo "build dist"
         echo "=============================================="
 
-        patch_android
+        #patch_android
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
+        #make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
         cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.swpark.zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
 
@@ -643,19 +657,41 @@ function build_dist()
         fi
         cp ${RESULT_DIR}/boot.img ${tmpdir}/BOOTABLE_IMAGES
         cp out/target/product/${BOARD_NAME}/recovery.img ${tmpdir}/BOOTABLE_IMAGES
-        mkdir -p ${tmpdir}/RADIO
-        cp device/nexell/${BOARD_NAME}/boot/2ndboot.bin ${tmpdir}/RADIO/2ndbootloader
-        cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
+        if [ ${OTA_UPDATE_UBOOT} == "true" ] || [ ${OTA_UPDATE_2NDBOOT} == "true" ]; then
+            mkdir -p ${tmpdir}/RADIO
+            if [ ${OTA_UPDATE_2NDBOOT} == "true" ]; then
+                cp device/nexell/${BOARD_NAME}/boot/2ndboot.bin ${tmpdir}/RADIO/2ndbootloader
+            fi
+            if [ ${OTA_UPDATE_UBOOT} == "true" ]; then
+                cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
+            fi
+        fi
         cd ${tmpdir}
         zip -r -q ../target *
         cd ${TOP}
         cp build/tools/releasetools/common.py /tmp/
         cp device/nexell/tools/common.py build/tools/releasetools/
         local ota_name="ota-${BOARD_NAME}-${release_date}.zip"
-        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
+        local i_option=
+        if [ ${OTA_INCREMENTAL} == "true" ]; then
+            if [ -f ${OTA_PREVIOUS_FILE} ]; then
+                local src_tmpdir=${RESULT_DIR}/src_tmp
+                rm -rf ${src_tmpdir}
+                rm -f ${RESULT_DIR}/src_target.zip
+                mkdir -p ${src_tmpdir}
+                unzip -o -q ${OTA_PREVIOUS_FILE} -d ${src_tmpdir}
+                cp ${RESULT_DIR}/boot.img ${src_tmpdir}/BOOTABLE_IMAGES
+                cd ${src_tmpdir}
+                zip -r -q ../src_target *
+                cd ${TOP}
+                i_option="-i ${RESULT_DIR}/src_target.zip"
+            fi
+        fi
+        echo "i_option ====> ${i_option}"
+        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${i_option} ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
         mv /tmp/common.py build/tools/releasetools/
 
-        restore_patch
+        #restore_patch
 
         local ota_desc=${RESULT_DIR}/OTA_DESC
         echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 4.4.2 KOT49H ${release_date}" > ${ota_desc}
