@@ -632,11 +632,11 @@ function build_dist()
         echo "build dist"
         echo "=============================================="
 
-        #patch_android
+        patch_android
 
-        #make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
+        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
-        cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.swpark.zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
+        cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.$(whoami).zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
 
         local tmpdir=${RESULT_DIR}/tmp
         rm -rf ${tmpdir}
