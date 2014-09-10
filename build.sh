@@ -252,7 +252,7 @@ function build_uboot()
 
         if [ ! -e ${TOP}/u-boot ]; then
             cd ${TOP}
-            ln -s linux/bootloader/u-boot-2013.x u-boot
+            ln -s linux/bootloader/u-boot-2014.07 u-boot
         fi
 
         cd ${TOP}/u-boot
@@ -425,7 +425,7 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build coda driver..."
         fi
-        cd ${TOP}/linux/pyrope/modules/coda960
+        cd ${TOP}/linux/nxp5430/modules/coda960
         ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"

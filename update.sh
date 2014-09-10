@@ -287,23 +287,23 @@ function update_partitionmap()
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        local secondboot_dir=${TOP}/linux/pyrope/boot/2ndboot
-        local nsih_dir=${TOP}/linux/pyrope/boot/nsih
+        local secondboot_dir=${TOP}/linux/nxp5430/boot/2ndboot
+        local nsih_dir=${TOP}/linux/nxp5430/boot/nsih
         local secondboot_file=
         local nsih_file=
         local option_d=other
         local option_p=
         case ${BOOT_DEVICE_TYPE} in
             spirom)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_spi.bin
+                secondboot_file=${secondboot_dir}/peridot_2ndboot_${BOARD_NAME}_spi.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_spi.txt
                 ;;
             sd0 | sd2)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_sdmmc.bin
+                secondboot_file=${secondboot_dir}/peridot_2ndboot_${BOARD_NAME}_sdmmc.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_sdmmc.txt
                 ;;
             nand)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_nand.bin
+                secondboot_file=${secondboot_dir}/peridot_2ndboot_${BOARD_NAME}_nand.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_nand.txt
                 option_d=nand
                 option_p="-p 8192"
@@ -323,9 +323,9 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-        ${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000 ${option_p}
+        ${TOP}/linux/nxp5430/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0x40100000 -e 0x40100000 ${option_p}
         flash 2ndboot ${secondboot_out_file}
-        #flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
+        #flash 2ndboot ${TOP}/linux/nxp5430/boot/2ndboot/2ndboot.ecc
         NSIH_FILE=${nsih_file}
 
         mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
@@ -430,7 +430,7 @@ function update_bootloader()
             local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 
-            ${TOP}/linux/pyrope/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
+            ${TOP}/linux/nxp5430/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootloader ${RESULT_DIR}/u-boot.ecc
         else
