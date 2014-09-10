@@ -400,22 +400,22 @@ function update_bootloader()
     if [ ${UPDATE_UBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
 
         # check bootdevice env save location
-        local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
-        local backup_file=/tmp/nxp4330q_${BOARD_NAME}.h
-        cp ${src_file} ${backup_file}
-        case ${BOOT_DEVICE_TYPE} in
-            spirom) apply_uboot_eeprom_config ;;
-            sd0 | sd2) apply_uboot_sd_config ;;
-            nand) apply_uboot_nand_config ;;
-        esac
-        local diff_result="$(diff -urN ${src_file} ${backup_file})"
-        if [[ ${#diff_result} > 0 ]]; then
-            echo ${src_file} is modified!!! rebuild
-            cd ${TOP}/u-boot
-            make -j8
-            cd ${TOP}
-            cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
-        fi
+        #local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+        #local backup_file=/tmp/nxp4330q_${BOARD_NAME}.h
+        #cp ${src_file} ${backup_file}
+        #case ${BOOT_DEVICE_TYPE} in
+            #spirom) apply_uboot_eeprom_config ;;
+            #sd0 | sd2) apply_uboot_sd_config ;;
+            #nand) apply_uboot_nand_config ;;
+        #esac
+        #local diff_result="$(diff -urN ${src_file} ${backup_file})"
+        #if [[ ${#diff_result} > 0 ]]; then
+            #echo ${src_file} is modified!!! rebuild
+            #cd ${TOP}/u-boot
+            #make -j8
+            #cd ${TOP}
+            #cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
+        #fi
 
         if [ ${UPDATE_UBOOT} == "true" ]; then
             cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}

@@ -258,13 +258,14 @@ function build_uboot()
         cd ${TOP}/u-boot
         make distclean
 
-        echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
-        case ${ROOT_DEVICE_TYPE} in
-            sd) apply_uboot_sd_root ;;
-            nand) apply_uboot_nand_root ;;
-        esac
+        #echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
+        #case ${ROOT_DEVICE_TYPE} in
+            #sd) apply_uboot_sd_root ;;
+            #nand) apply_uboot_nand_root ;;
+        #esac
 
-        make nxp4330q_${BOARD_NAME}_config
+        #make nxp4330q_${BOARD_NAME}_config
+        make nxp5430_${BOARD_NAME}_config
         make -j8
         check_result "build-uboot"
         if [ -f include/configs/nxp4330q_${BOARD_NAME}.h.org ]; then
@@ -379,7 +380,8 @@ function build_kernel()
 
         cd ${TOP}/kernel
 
-        local kernel_config=nxp4330_${BOARD_NAME}_android_defconfig
+        #local kernel_config=nxp4330_${BOARD_NAME}_android_defconfig
+        local kernel_config=nxp5430_${BOARD_NAME}_android_defconfig
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             kernel_config=$(apply_kernel_nand_config)
             echo "nand kernel config: ${kernel_config}"
