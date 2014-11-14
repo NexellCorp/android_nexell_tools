@@ -1,0 +1,15 @@
+# nand partition map 
+# flash= <device>.<dev no>:<partition>:<fstype>:<start>,<length>
+#   support device : eeprom, nand, mmc
+#   support fstype : 2nd, boot, raw, fat, ext4, ubi
+#
+flash=nand,0:2ndboot:2nd:0x0,0x20000;
+flash=nand,0:bootloader:boot:0x20000,0xa0000;
+flash=nand,0:kernel:raw:0xc00000,0x600000;
+flash=nand,0:ramdisk:raw:0x1800000,0x400000;
+flash=nand,0:bootlogo:raw:0x2000000,0x400000;
+flash=nand,0:battery:raw:0x2800000,0x400000;
+flash=nand,0:update:raw:0x3000000,0x400000;
+flash=nand,0:system:ubi:0x4000000,0x20000000;
+flash=nand,0:cache:ubi:0x24000000,0x10000000;
+flash=nand,0:userdata:ubi:0x34000000,0x0;
