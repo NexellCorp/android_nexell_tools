@@ -278,7 +278,7 @@ function build_uboot()
 
 function apply_kernel_nand_config()
 {
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${BOARD_NAME}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${BOARD_NAME}_android_lollipop_defconfig
     local dst_config=nxp4330_${BOARD_NAME}_android_defconfig.nandboot
     local dst_file=${src_file}.nandboot
     cp ${src_file} ${dst_file}
@@ -379,7 +379,7 @@ function build_kernel()
 
         cd ${TOP}/kernel
 
-        local kernel_config=nxp4330_${BOARD_NAME}_android_defconfig
+        local kernel_config=nxp4330_${BOARD_NAME}_android_lollipop_defconfig
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             kernel_config=$(apply_kernel_nand_config)
             echo "nand kernel config: ${kernel_config}"
