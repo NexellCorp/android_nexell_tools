@@ -54,7 +54,7 @@ function is_sensor_exist()
 
 function query_sensor_type()
 {
-    local src_dir=${TOP}/hardware/nexell/pyrope/libsensors
+    local src_dir=${TOP}/hardware/samsung_slsi/slsiap/libsensors
     cd ${src_dir}
     local sensors=$(find . -maxdepth 1 -type d | tr -d './' | awk 'NF > 0 {print $1}')
     echo "========================================================================"

@@ -142,8 +142,8 @@ function apply_uboot_nand_config()
         echo -e -n "apply nand booting config to u-boot...\t"
     fi
 
-    local dest_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
-    # backup: include/configs/nxp4330q_${BOARD_NAME}.h.org
+    local dest_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    # backup: include/configs/s5p4418_${BOARD_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
     local config_logo_load="    #define CONFIG_CMD_LOGO_LOAD    \"nand read 0x62000000 0x2000000 0x400000;bootlogo 0x62000000\""
@@ -170,9 +170,9 @@ function apply_uboot_partition_config()
         echo -e -n "apply sd/usb partition info at android BoardConfig.mk to u-boot...\t"
     fi
 
-    local dest_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local dest_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     local src_file=${TOP}/device/nexell/${BOARD_NAME}/BoardConfig.mk
-    # backup: include/configs/nxp4330q_${BOARD_NAME}.h.org
+    # backup: include/configs/s5p4418_${BOARD_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
     local system_partition_size=`awk '/BOARD_SYSTEMIMAGE_PARTITION_SIZE/{print $3}' ${src_file}`
@@ -190,7 +190,7 @@ function apply_uboot_partition_config()
 
 function enable_uboot_sd_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
     local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
@@ -202,7 +202,7 @@ function enable_uboot_sd_root()
 
 function disable_uboot_sd_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     echo "src_file: ${src_file}"
     sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
@@ -210,7 +210,7 @@ function disable_uboot_sd_root()
 
 function enable_uboot_nand_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_NAND/#define CONFIG_CMD_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_UBIFS/#define CONFIG_CMD_UBIFS/g' ${src_file}
@@ -222,7 +222,7 @@ function enable_uboot_nand_root()
 
 function disable_uboot_nand_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^#define[[:space:]]CONFIG_CMD_NAND/\/\/#define CONFIG_CMD_NAND/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_CMD_UBIFS/\/\/#define CONFIG_CMD_UBIFS/g' ${src_file}
@@ -252,7 +252,7 @@ function build_uboot()
 
         if [ ! -e ${TOP}/u-boot ]; then
             cd ${TOP}
-            ln -s linux/bootloader/u-boot-2013.x u-boot
+            ln -s linux/bootloader/u-boot-2014.07 u-boot
         fi
 
         cd ${TOP}/u-boot
@@ -264,11 +264,11 @@ function build_uboot()
             nand) apply_uboot_nand_root ;;
         esac
 
-        make nxp4330q_${BOARD_NAME}_config
+        make s5p4418_${BOARD_NAME}_config
         make -j8
         check_result "build-uboot"
-        if [ -f include/configs/nxp4330q_${BOARD_NAME}.h.org ]; then
-            mv include/configs/nxp4330q_${BOARD_NAME}.h.org include/configs/nxp4330q_${BOARD_NAME}.h
+        if [ -f include/configs/s5p4418_${BOARD_NAME}.h.org ]; then
+            mv include/configs/s5p4418_${BOARD_NAME}.h.org include/configs/s5p4418_${BOARD_NAME}.h
         fi
         cd ${TOP}
 
@@ -278,8 +278,8 @@ function build_uboot()
 
 function apply_kernel_nand_config()
 {
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${BOARD_NAME}_android_defconfig
-    local dst_config=nxp4330_${BOARD_NAME}_android_defconfig.nandboot
+    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${BOARD_NAME}_android_defconfig
+    local dst_config=s5p4418_${BOARD_NAME}_android_defconfig.nandboot
     local dst_file=${src_file}.nandboot
     cp ${src_file} ${dst_file}
 
@@ -379,7 +379,7 @@ function build_kernel()
 
         cd ${TOP}/kernel
 
-        local kernel_config=nxp4330_${BOARD_NAME}_android_defconfig
+        local kernel_config=s5p4418_${BOARD_NAME}_android_defconfig
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             kernel_config=$(apply_kernel_nand_config)
             echo "nand kernel config: ${kernel_config}"
@@ -414,7 +414,7 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build vr driver..."
         fi
-        cd ${TOP}/hardware/nexell/pyrope/prebuilt/modules/vr
+        cd ${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
         ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
@@ -423,7 +423,7 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build coda driver..."
         fi
-        cd ${TOP}/linux/pyrope/modules/coda960
+        cd ${TOP}/linux/platform/s5p4418/modules/coda960
         ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
@@ -479,7 +479,7 @@ function make_android_root()
 function apply_android_overlay()
 {
     cd ${TOP}
-    local overlay_dir=${TOP}/hardware/nexell/pyrope/overlay-apps
+    local overlay_dir=${TOP}/hardware/samsung_slsi/slsiap/overlay-apps
     local overlay_list_file=${overlay_dir}/files.txt
     local token1=""
     while read line; do
@@ -512,7 +512,7 @@ function refine_android_system()
 function patch_android()
 {
     cd ${TOP}
-    local patch_dir=${TOP}/hardware/nexell/pyrope/patch
+    local patch_dir=${TOP}/hardware/samsung_slsi/slsiap/patch
     local patch_list_file=${patch_dir}/files.txt
     local src_file=""
     local dst_dir=""
@@ -529,7 +529,7 @@ function restore_patch()
 {
     cd ${TOP}
     if [ -d ${TOP}/.repo ]; then
-        local patch_dir=${TOP}/hardware/nexell/pyrope/patch
+        local patch_dir=${TOP}/hardware/samsung_slsi/slsiap/patch
         local patch_list_file=${patch_dir}/files.txt
         local src_file=""
         local dst_dir=""
@@ -589,6 +589,16 @@ function sign_system_private_app()
     sync
 }
 
+function generate_key()
+{
+    echo "key generation for ${BOARD_NAME}"
+    [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/media.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh media ${BOARD_NAME}
+    [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && $(${TOP}/device/nexell/tools/mkkey.sh platform ${BOARD_NAME})
+    [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
+    [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
+    [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/testkey.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh testkey ${BOARD_NAME}
+}
+
 function build_android()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_ANDROID} == "true" ]; then
@@ -597,14 +607,8 @@ function build_android()
         echo "build android"
         echo "=============================================="
 
-        echo "key generation for ${BOARD_NAME}"
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/media.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh media ${BOARD_NAME}
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/platform.pk8 ] && $(${TOP}/device/nexell/tools/mkkey.sh platform ${BOARD_NAME})
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
-        [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/testkey.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh testkey ${BOARD_NAME}
-
-        patch_android
+        #patch_android
+        #generate_key
 
         apply_kernel_ion_header
 
@@ -618,7 +622,7 @@ function build_android()
 
         #build_cts
 
-        restore_patch
+        #restore_patch
 
         echo "---------- End of build android"
     fi
@@ -632,7 +636,7 @@ function build_dist()
         echo "build dist"
         echo "=============================================="
 
-        patch_android
+        #patch_android
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
@@ -695,7 +699,7 @@ function build_dist()
 
         local ota_desc=${RESULT_DIR}/OTA_DESC
         echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 4.4.2 KOT49H ${release_date}" > ${ota_desc}
-        echo "Rom ID: nexell_pyrope_${BOARD_NAME}_kk" >> ${ota_desc}
+        echo "Rom ID: samsung_slsiap_${BOARD_NAME}_kk" >> ${ota_desc}
         echo -e ${otaver} | awk '{print "Rom Version: " $1}' >> ${ota_desc}
         echo "Rom Date: ${release_date}" >> ${ota_desc}
         echo "Download URL: http://git.nexell.co.kr/_builds/${ota_name}" >> ${ota_desc}
@@ -740,7 +744,7 @@ function make_system()
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/system ${RESULT_DIR}
 
-    apply_android_overlay
+    #apply_android_overlay
     #remove_android_banned_files
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then

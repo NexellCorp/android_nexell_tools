@@ -34,7 +34,7 @@ TARGET_BOARD_DIR=
 function usage()
 {
     echo "Usage: $0 -b <your-board-name> -r <root-device-type> [-s <source-board-name> -z <root-device-size-in-GB> -m <main-sd-device-number> -e <external-sd-device-number> -n camera -n sensor -n bluetooth -n sd-storage -n usb-storage -n otg-storage]"
-    echo -e '\n -b <board-name> : new board name that must be compatible with kernel plat(arch/arm/plat-nxp4330/xxx)'
+    echo -e '\n -b <board-name> : new board name that must be compatible with kernel plat(arch/arm/plat-s5p4418/xxx)'
     echo " -r <root-device-type> : your root device type(sd, nand, usb)"
     echo " -s <source-board-name> : board directory that you want to copy from(available boards: $(get_available_board))"
     echo " -z <root-device-size-in-GB> : root device size in GigaBytes default 16GB, range from 2GB to 64GB"
@@ -362,7 +362,7 @@ function handle_no_camera()
 
         sed -i -e 's/BOARD_HAS_CAMERA\ :=\ true/BOARD_HAS_CAMERA\ :=\ false/g' ${TARGET_BOARD_DIR}/BoardConfig.mk
 
-        tac ${TARGET_BOARD_DIR}/device.mk  | sed -e '/camera.pyrope/,+5d' -e '/camera/d'| tac  > /tmp/device.mk
+        tac ${TARGET_BOARD_DIR}/device.mk  | sed -e '/camera.slsiap/,+5d' -e '/camera/d'| tac  > /tmp/device.mk
         mv /tmp/device.mk ${TARGET_BOARD_DIR}/device.mk
 
         if [ ${VERBOSE} == "true" ]; then
@@ -461,7 +461,7 @@ function handle_no_usb_storage()
         fi
 
         # vold.fstab
-        #sed -e '/nxp4330-ehci/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
+        #sed -e '/nxp-ehci/d' ${TARGET_BOARD_DIR}/vold.fstab > /tmp/vold.fstab
         #mv /tmp/vold.fstab ${TARGET_BOARD_DIR}/vold.fstab
 
         # overlay/frameworks/base/core/res/res/xml/storage_list.xml

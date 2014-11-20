@@ -96,7 +96,7 @@ function query_camera_name()
         exit 1
     fi
 
-    local src_dir=${TOP}/hardware/nexell/pyrope/libcamerasensor
+    local src_dir=${TOP}/hardware/samsung_slsi/slsiap/libcamerasensor
     cd ${src_dir}
     local sensors=$(ls *.cpp | cut -d'.' -f1)
     cd ${TOP}
@@ -120,7 +120,7 @@ function query_camera_name()
 
 function check_camera_name()
 {
-    local src_dir=${TOP}/hardware/nexell/pyrope/libcamerasensor
+    local src_dir=${TOP}/hardware/samsung_slsi/slsiap/libcamerasensor
     if [ ${1} == "back" ]; then
         if [ -z ${BACK_CAMERA_NAME} ]; then
             echo "Error: Back Camera Name is not set!!!"
@@ -161,7 +161,7 @@ function check_camera_v4l2_id()
 
 function base_kernel_check()
 {
-    local src_file=${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
     if [ ! -f ${src_file} ]; then
         echo "You must port ${BOARD} in kernel!!!"
         exit 1
@@ -181,7 +181,7 @@ function get_camera_name()
 {
     camera_name_arg_check ${1}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
     local search="${1}_camera_i2c_boardinfo"
     local name=$(awk '/'"${search}"'/{getline; getline; print $0}' ${src_file} | awk '/I2C_BOARD_INFO/{print $0}' |\
         cut -d'(' -f2 | cut -d',' -f1 | sed 's/[[:punct:]]//g')
@@ -192,9 +192,9 @@ function get_camera_v4l2_id()
 {
     camera_name_arg_check ${1}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
     # first search
-    local tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; print $3}' ${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c |\
+    local tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; print $3}' ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c |\
          grep ${1}_camera)
     if [ ${tmp} ]; then
         echo "nxp_v4l2_sensor0"
@@ -204,7 +204,7 @@ function get_camera_v4l2_id()
         else
             # second search
             tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; getline; getline; getline; getline; print $3}'\
-                 ${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c | grep ${1}_camera)
+                 ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c | grep ${1}_camera)
             if [ ${tmp} ]; then
                 echo "nxp_v4l2_sensor1"
             else
@@ -217,7 +217,7 @@ function get_camera_v4l2_id()
 function is_camera_mipi()
 {
     camera_name_arg_check ${1}
-    local src_file=${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
     local search=
     if [ -${1} == "back" ];then
         search="sensor\[${BACK_CAMERA_V4L2_ID#nxp_v4l2_sensor}"
@@ -225,7 +225,7 @@ function is_camera_mipi()
         search="sensor\[${FRONT_CAMERA_V4L2_ID#nxp_v4l2_sensor}"
     fi
 
-    local tmp=$(awk '/'"${search}"'/{getline; getline; getline; print $0}' ${TOP}/kernel/arch/arm/plat-nxp4330/${BOARD}/device.c |\
+    local tmp=$(awk '/'"${search}"'/{getline; getline; getline; print $0}' ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c |\
          grep is_mipi | awk '{print $3}' | tr -d ',')
     if [ "${tmp}" ]; then
         echo "${tmp}"

@@ -35,7 +35,7 @@ function check_android_version()
         VERSION="jb-mr1.1"
         SERVER=${JB_SERVER_URL}
     elif [ ${VERSION} == "kitkat" ]; then
-        VERSION="kitkat-mr1-pyrope"
+        VERSION="kitkat-dev
         SERVER=${KITKAT_SERVER_URL}
     else
         usage
