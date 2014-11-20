@@ -43,7 +43,7 @@ function parse_args()
 function check_kernel_porting()
 {
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
     if [ ! -f ${src_file} ]; then
         echo "can't find kernel config for ${board}"
         echo "try after create ${src_file}!!!"
@@ -56,7 +56,7 @@ function get_use_decimator()
     check_kernel_porting
 
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
     grep -q CONFIG_NXP_CAPTURE_DECIMATOR=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"
@@ -70,7 +70,7 @@ function get_use_hdmi()
     check_kernel_porting
 
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
     grep -q CONFIG_NXP_OUT_HDMI=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"
@@ -84,7 +84,7 @@ function get_use_resol()
     check_kernel_porting
 
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/nxp4330_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
     grep -q CONFIG_NXP_OUT_RESOLUTION_CONVERTER=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"

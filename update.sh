@@ -287,23 +287,23 @@ function update_partitionmap()
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        local secondboot_dir=${TOP}/linux/pyrope/boot/2ndboot
-        local nsih_dir=${TOP}/linux/pyrope/boot/nsih
+        local secondboot_dir=${TOP}/linux/platform/s5p4418/boot/2ndboot
+        local nsih_dir=${TOP}/linux/platform/s5p4418/boot/nsih
         local secondboot_file=
         local nsih_file=
         local option_d=other
         local option_p=
         case ${BOOT_DEVICE_TYPE} in
             spirom)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_spi.bin
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_spi.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_spi.txt
                 ;;
             sd0 | sd2)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_sdmmc.bin
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_sdmmc.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_sdmmc.txt
                 ;;
             nand)
-                secondboot_file=${secondboot_dir}/pyrope_2ndboot_${BOARD_NAME}_nand.bin
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_nand.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_nand.txt
                 option_d=nand
                 option_p="-p 8192"
@@ -323,10 +323,8 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-		#${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} -l 0xffff00000 -e 0xffff0000 ${option_p}
-		${TOP}/linux/pyrope/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+		${TOP}/linux/platform/s5p4418/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
         flash 2ndboot ${secondboot_out_file}
-        #flash 2ndboot ${TOP}/linux/pyrope/boot/2ndboot/2ndboot.ecc
         NSIH_FILE=${nsih_file}
 
         mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
@@ -337,7 +335,7 @@ function update_2ndboot()
 # enable/disable functions for only boot device type
 function enable_uboot_eeprom()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^\/\/#define CONFIG_CMD_EEPROM/#define CONFIG_CMD_EEPROM/g' ${src_file}
     sed -i 's/^\/\/#define CONFIG_SPI/#define CONFIG_SPI/g' ${src_file}
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_EEPROM/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
@@ -345,7 +343,7 @@ function enable_uboot_eeprom()
 
 function disable_uboot_eeprom()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^#define CONFIG_CMD_EEPROM/\/\/#define CONFIG_CMD_EEPROM/g' ${src_file}
     sed -i 's/^#define CONFIG_SPI/\/\/#define CONFIG_SPI/g' ${src_file}
     sed -i 's/^#define CONFIG_ENV_IS_IN_EEPROM/\/\/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
@@ -353,25 +351,25 @@ function disable_uboot_eeprom()
 
 function enable_uboot_nand_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_NAND/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
 }
 
 function disable_uboot_nand_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^#define CONFIG_ENV_IS_IN_NAND/\/\/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
 }
 
 function enable_uboot_mmc_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_MMC/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
 }
 
 function disable_uboot_mmc_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
     sed -i 's/^#define CONFIG_ENV_IS_IN_MMC/\/\/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
 }
 
@@ -401,8 +399,8 @@ function update_bootloader()
     if [ ${UPDATE_UBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
 
         # check bootdevice env save location
-        local src_file=${TOP}/u-boot/include/configs/nxp4330q_${BOARD_NAME}.h
-        local backup_file=/tmp/nxp4330q_${BOARD_NAME}.h
+        local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+        local backup_file=/tmp/s5p4418_${BOARD_NAME}.h
         cp ${src_file} ${backup_file}
         case ${BOOT_DEVICE_TYPE} in
             spirom) apply_uboot_eeprom_config ;;
@@ -431,7 +429,7 @@ function update_bootloader()
             local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 
-            ${TOP}/linux/pyrope/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
+            ${TOP}/linux/platform/s5p4418/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootloader ${RESULT_DIR}/u-boot.ecc
         else

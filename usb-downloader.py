@@ -1,4 +1,4 @@
-# run : sudo python usb-downloader.py -b pyrope_2ndboot_USB.bin -f u-boot.bin -a 0x41000000 -j 0x41000000 -n NSIH_USB.txt
+# run : sudo python usb-downloader.py -b 2ndboot_USB.bin -f u-boot.bin -a 0x41000000 -j 0x41000000 -n NSIH_USB.txt
 import os
 import sys
 import argparse
