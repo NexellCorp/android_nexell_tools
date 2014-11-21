@@ -590,7 +590,7 @@ function update_userdata()
     fi
 }
 
-check_top
+#check_top
 source device/nexell/tools/common.sh
 
 parse_args $@
