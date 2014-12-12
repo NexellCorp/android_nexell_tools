@@ -565,3 +565,10 @@ function replace_uImage_initramfs()
     echo -n "true"
 }
 
+function get_cpu_variant2()
+{
+     board_config="device/nexell/$1/BoardConfig.mk"
+     cpu_variant2=$(grep TARGET_CPU_VARIANT2 ${board_config} | awk '{print $3}')
+     echo ${cpu_variant2}
+}
+
