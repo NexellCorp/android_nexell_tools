@@ -9,6 +9,7 @@ TOP=$(pwd)
 
 SOURCE_BOARD_NAME=pyxis
 TARGET_BOARD_NAME=
+ONLY_COPY=false
 ROOT_DEVICE_TYPE=
 ROOT_DEVICE_SIZE="16GB"
 MAIN_SDCARD_DEVICE_NUM="0"
@@ -40,6 +41,7 @@ function usage()
     echo " -z <root-device-size-in-GB> : root device size in GigaBytes default 16GB, range from 2GB to 64GB"
     echo " -m <main-sd-device-number> : if your root device type is sd, specify card slot number(0, 1, 2), default 0"
     echo " -e <external-sd-device-number> : if your board has external sdcard slot, specify card slot number(0, 1, 2), default 1"
+    echo " -c : if you want to only copy source to target board, specify this"
     echo " -n camera : if your board don't have camera, specify this"
     echo " -n sensor : if your board don't have sensor(gyro, accelerometer ...) device, specify this"
     echo " -n bluetooth : if your board don't have bluetooth device, specify this"
@@ -58,7 +60,7 @@ function check_top()
 
 function parse_args()
 {
-    TEMP=`getopt -o "s:b:r:z:m:e:n:hv" -- "$@"`
+    TEMP=`getopt -o "s:b:r:z:m:e:n:hvc" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -80,6 +82,7 @@ function parse_args()
                  shift 2 ;;
             -h ) usage; exit 1 ;;
             -v ) VERBOSE=true; shift 1 ;;
+            -c ) ONLY_COPY=true; shift 1 ;;
             -- ) break ;;
             *  ) echo "invalid option $1"; usage; exit 1 ;;
         esac
@@ -94,6 +97,7 @@ function print_args()
         echo "============================================"
         echo -e "SOURCE_BOARD_NAME:\t${SOURCE_BOARD_NAME}"
         echo -e "TARGET_BOARD_NAME:\t${TARGET_BOARD_NAME}"
+        echo -e "ONLY_COPY:\t${ONLY_COPY}"
         echo -e "ROOT_DEVICE_TYPE:\t${ROOT_DEVICE_TYPE}"
         echo -e "ROOT_DEVICE_SIZE:\t${ROOT_DEVICE_SIZE}"
         echo -e "MAIN_SDCARD_DEVICE_NUM:\t${MAIN_SDCARD_DEVICE_NUM}"
@@ -504,6 +508,10 @@ parse_args $@
 print_args
 check_source_board
 check_target_board
+if [ ${ONLY_COPY} == "true" ]; then
+    copy_source_to_target
+    exit 0
+fi
 check_root_device_type
 check_root_device_size
 check_main_sd_device_number
