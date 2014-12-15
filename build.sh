@@ -27,6 +27,7 @@ OTA_UPDATE_UBOOT=true
 
 CHIP_NAME=
 BOARD_NAME=
+BOARD_PURE_NAME=
 
 function check_top()
 {
@@ -143,8 +144,8 @@ function apply_uboot_nand_config()
         echo -e -n "apply nand booting config to u-boot...\t"
     fi
 
-    local dest_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
-    # backup: include/configs/${CHIP_NAME}_${BOARD_NAME}.h.org
+    local dest_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+    # backup: include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
     local config_logo_load="    #define CONFIG_CMD_LOGO_LOAD    \"nand read 0x62000000 0x2000000 0x400000;bootlogo 0x62000000\""
@@ -171,9 +172,8 @@ function apply_uboot_partition_config()
         echo -e -n "apply sd/usb partition info at android BoardConfig.mk to u-boot...\t"
     fi
 
-    local dest_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+    local dest_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     local src_file=${TOP}/device/nexell/${BOARD_NAME}/BoardConfig.mk
-    # backup: include/configs/${CHIP_NAME}_${BOARD_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
     local system_partition_size=`awk '/BOARD_SYSTEMIMAGE_PARTITION_SIZE/{print $3}' ${src_file}`
@@ -191,7 +191,7 @@ function apply_uboot_partition_config()
 
 function enable_uboot_sd_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
     local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
@@ -203,7 +203,7 @@ function enable_uboot_sd_root()
 
 function disable_uboot_sd_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     echo "src_file: ${src_file}"
     sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
@@ -211,7 +211,7 @@ function disable_uboot_sd_root()
 
 function enable_uboot_nand_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_NAND/#define CONFIG_CMD_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_UBIFS/#define CONFIG_CMD_UBIFS/g' ${src_file}
@@ -223,7 +223,7 @@ function enable_uboot_nand_root()
 
 function disable_uboot_nand_root()
 {
-    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^#define[[:space:]]CONFIG_CMD_NAND/\/\/#define CONFIG_CMD_NAND/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_CMD_UBIFS/\/\/#define CONFIG_CMD_UBIFS/g' ${src_file}
@@ -265,11 +265,11 @@ function build_uboot()
             nand) apply_uboot_nand_root ;;
         esac
 
-        make ${CHIP_NAME}_${BOARD_NAME}_config
+        make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
         make -j8
         check_result "build-uboot"
-        if [ -f include/configs/${CHIP_NAME}_${BOARD_NAME}.h.org ]; then
-            mv include/configs/${CHIP_NAME}_${BOARD_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_NAME}.h
+        if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
+            mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
         fi
         cd ${TOP}
 
@@ -279,8 +279,8 @@ function build_uboot()
 
 function apply_kernel_nand_config()
 {
-    local src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_NAME}_android_defconfig
-    local dst_config=${CHIP_NAME}_${BOARD_NAME}_android_defconfig.nandboot
+    local src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
+    local dst_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig.nandboot
     local dst_file=${src_file}.nandboot
     cp ${src_file} ${dst_file}
 
@@ -380,7 +380,7 @@ function build_kernel()
 
         cd ${TOP}/kernel
 
-        local kernel_config=${CHIP_NAME}_${BOARD_NAME}_android_defconfig
+        local kernel_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             kernel_config=$(apply_kernel_nand_config)
             echo "nand kernel config: ${kernel_config}"
@@ -820,6 +820,7 @@ print_args
 export VERBOSE
 set_android_toolchain_and_check
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
+BOARD_PURE_NAME=${BOARD_NAME%_*}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
 clean_up

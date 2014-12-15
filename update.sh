@@ -24,6 +24,7 @@ VERBOSE=false
 
 # dynamic config
 BOARD_NAME=
+BOARD_PURE_NAME=
 ROOT_DEVICE_TYPE=
 NSIH_FILE=
 APPLY_KERNEL_INIT_RAMFS=false
@@ -127,6 +128,7 @@ function get_board_name()
         exit 1
     else
         BOARD_NAME=$(cat ${build_prop} | grep ro.build.product= | sed 's/\(ro.build.product\)=\(.*\)/\2/')
+        BOARD_PURE_NAME=${BOARD_NAME%_*}
     fi
 
     vmsg "BOARD_NAME: ${BOARD_NAME}"
@@ -295,16 +297,16 @@ function update_2ndboot()
         local option_p=
         case ${BOOT_DEVICE_TYPE} in
             spirom)
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_spi.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_spi.txt
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_spi.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_spi.txt
                 ;;
             sd0 | sd2)
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_sdmmc.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_sdmmc.txt
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_sdmmc.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_sdmmc.txt
                 ;;
             nand)
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_NAME}_nand.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_NAME}_nand.txt
+                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_nand.bin
+                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_nand.txt
                 option_d=nand
                 option_p="-p 8192"
                 ;;
@@ -335,7 +337,7 @@ function update_2ndboot()
 # enable/disable functions for only boot device type
 function enable_uboot_eeprom()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define CONFIG_CMD_EEPROM/#define CONFIG_CMD_EEPROM/g' ${src_file}
     sed -i 's/^\/\/#define CONFIG_SPI/#define CONFIG_SPI/g' ${src_file}
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_EEPROM/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
@@ -343,7 +345,7 @@ function enable_uboot_eeprom()
 
 function disable_uboot_eeprom()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^#define CONFIG_CMD_EEPROM/\/\/#define CONFIG_CMD_EEPROM/g' ${src_file}
     sed -i 's/^#define CONFIG_SPI/\/\/#define CONFIG_SPI/g' ${src_file}
     sed -i 's/^#define CONFIG_ENV_IS_IN_EEPROM/\/\/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
@@ -351,25 +353,25 @@ function disable_uboot_eeprom()
 
 function enable_uboot_nand_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_NAND/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
 }
 
 function disable_uboot_nand_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^#define CONFIG_ENV_IS_IN_NAND/\/\/#define CONFIG_ENV_IS_IN_NAND/g' ${src_file}
 }
 
 function enable_uboot_mmc_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define CONFIG_ENV_IS_IN_MMC/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
 }
 
 function disable_uboot_mmc_env()
 {
-    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
+    local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
     sed -i 's/^#define CONFIG_ENV_IS_IN_MMC/\/\/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
 }
 
@@ -399,8 +401,8 @@ function update_bootloader()
     if [ ${UPDATE_UBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
 
         # check bootdevice env save location
-        local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_NAME}.h
-        local backup_file=/tmp/s5p4418_${BOARD_NAME}.h
+        local src_file=${TOP}/u-boot/include/configs/s5p4418_${BOARD_PURE_NAME}.h
+        local backup_file=/tmp/s5p4418_${BOARD_PURE_NAME}.h
         cp ${src_file} ${backup_file}
         case ${BOOT_DEVICE_TYPE} in
             spirom) apply_uboot_eeprom_config ;;
@@ -426,7 +428,7 @@ function update_bootloader()
         fi
 
         if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-            local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_NAME})
+            local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 
             ${TOP}/linux/platform/s5p4418/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
