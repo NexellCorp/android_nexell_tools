@@ -326,7 +326,9 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-		${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+        ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -k 2ndboot -b SD -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
+		#${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -k 2ndboot -b SPI -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
         flash 2ndboot ${secondboot_out_file}
         NSIH_FILE=${nsih_file}
 
