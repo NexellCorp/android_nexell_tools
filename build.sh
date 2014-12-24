@@ -746,7 +746,7 @@ function make_system()
     cp -a ${out_dir}/system ${RESULT_DIR}
 
     #apply_android_overlay
-    #remove_android_banned_files
+    remove_android_banned_files
 
     if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         #cp ${out_dir}/system.img ${RESULT_DIR}
