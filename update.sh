@@ -296,14 +296,17 @@ function update_2ndboot()
         local nsih_file=
         local option_d=other
         local option_p=
+        local option_b=
         case ${BOOT_DEVICE_TYPE} in
             spirom)
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_spi.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_spi.txt
+                option_b="SPI"
                 ;;
             sd0 | sd2)
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_sdmmc.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_sdmmc.txt
+                option_b="SD"
                 ;;
             nand)
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_nand.bin
@@ -326,9 +329,11 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-        ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
-        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -k 2ndboot -b SD -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
-		#${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -k 2ndboot -b SPI -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
+        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+        ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -k 2ndboot -b ${option_b} -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
+        sync
+        sleep 1
+        echo "call fastboot"
         flash 2ndboot ${secondboot_out_file}
         NSIH_FILE=${nsih_file}
 
