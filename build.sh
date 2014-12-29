@@ -598,6 +598,7 @@ function generate_key()
     [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/release.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh release ${BOARD_NAME}
     [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/shared.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh shared ${BOARD_NAME}
     [ ! -e  ${TOP}/vendor/nexell/security/${BOARD_NAME}/testkey.pk8 ] && ${TOP}/device/nexell/tools/mkkey.sh testkey ${BOARD_NAME}
+    echo "End of generate_key"
 }
 
 function build_android()
@@ -609,7 +610,7 @@ function build_android()
         echo "=============================================="
 
         #patch_android
-        #generate_key
+        generate_key
 
         apply_kernel_ion_header
 
