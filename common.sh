@@ -13,14 +13,24 @@ function check_result()
 
 function set_android_toolchain_and_check()
 {
-    if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin ]; then
+    local toolchain_version=
+    if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+        toolchain_version=4.6
+    elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+        toolchain_version=4.8
+    else
+        echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+        exit 1
+    fi
+
+    if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin ]; then
         echo "Error: can't find android toolchain!!!"
         echo "Check android source"
         exit 1
     fi
 
     echo "PATH setting for android toolchain"
-    export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/:$PATH
+    export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin/:$PATH
     arm-eabi-gcc -v
     if [ $? -ne 0 ]; then
         echo "Error: can't check arm-eabi-gcc"
@@ -572,3 +582,9 @@ function get_cpu_variant2()
      echo ${cpu_variant2}
 }
 
+function get_android_version_major()
+{
+     local version_file=${TOP}/build/core/version_defaults.mk
+     local version_major=$(grep "PLATFORM_VERSION := " ${version_file} | awk '{print $3}' | awk -F. '{print $1}')
+     echo ${version_major}
+}

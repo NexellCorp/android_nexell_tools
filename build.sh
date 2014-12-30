@@ -29,6 +29,8 @@ CHIP_NAME=
 BOARD_NAME=
 BOARD_PURE_NAME=
 
+ANDROID_VERSION_MAJOR=
+
 function check_top()
 {
     if [ ! -d .repo ]; then
@@ -380,7 +382,16 @@ function build_kernel()
 
         cd ${TOP}/kernel
 
-        local kernel_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
+        local kernel_config=
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            kernel_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
+        elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+            kernel_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_lollipop_defconfig
+        else
+            echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+            exit 1
+        fi
+
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             kernel_config=$(apply_kernel_nand_config)
             echo "nand kernel config: ${kernel_config}"
@@ -612,7 +623,9 @@ function build_android()
         #patch_android
         generate_key
 
-        apply_kernel_ion_header
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            apply_kernel_ion_header
+        fi
 
         make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
         check_result "build-android"
@@ -819,6 +832,7 @@ source device/nexell/tools/common.sh
 parse_args $@
 print_args
 export VERBOSE
+export ANDROID_VERSION_MAJOR=$(get_android_version_major)
 set_android_toolchain_and_check
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 BOARD_PURE_NAME=${BOARD_NAME%_*}
