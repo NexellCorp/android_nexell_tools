@@ -204,7 +204,8 @@ function disable_uboot_sd_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     echo "src_file: ${src_file}"
-    sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
+    #freestyle: not yet
+    #sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
 
@@ -287,7 +288,7 @@ function apply_kernel_nand_config()
 	# FTL
 	sed -i 's/.*CONFIG_NXP_FTL .*/ a\
 CONFIG_NXP_FTL=y a\
-CONFIG_NAND_FTL=y' ${dst_file}
+CONFIG_NAND_FTL=y/g' ${dst_file}
     
     echo ${dst_config}
 }
@@ -767,8 +768,8 @@ BOARD_PURE_NAME=${BOARD_NAME%_*}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
 #clean_up
-#build_uboot
-#build_kernel
+build_uboot
+build_kernel
 build_module
 build_android
 post_process

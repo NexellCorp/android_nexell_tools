@@ -401,8 +401,9 @@ function apply_uboot_sd_config()
 function apply_uboot_nand_config()
 {
     disable_uboot_eeprom
-    enable_uboot_nand_env
-    disable_uboot_mmc_env
+    #freestyle: not yet
+    #enable_uboot_nand_env
+    #disable_uboot_mmc_env
 }
 
 function update_bootloader()
@@ -616,10 +617,12 @@ get_root_device
 get_root_device_size
 
 update_partitionmap
+#freestyle: not yet
 #update_2ndboot
 #update_bootloader
 change_fstab_for_sd
 
+#freestyle: 
 #if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 #    update_kernel
 #    update_bmp
