@@ -290,8 +290,8 @@ function update_partitionmap()
 function update_2ndboot()
 {
     if [ ${UPDATE_2NDBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
-        local secondboot_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/2ndboot
-        local nsih_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/nsih
+        local secondboot_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/release/2ndboot
+        local nsih_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/release/nsih
         local secondboot_file=
         local nsih_file=
         local option_d=other
