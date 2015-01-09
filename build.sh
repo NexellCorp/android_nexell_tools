@@ -150,17 +150,14 @@ function apply_uboot_nand_config()
     # backup: include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
-    local config_logo_load="    #define CONFIG_CMD_LOGO_LOAD    \"nand read 0x62000000 0x2000000 0x400000;bootlogo 0x62000000\""
+    local config_logo_load="    #define CONFIG_CMD_LOGO_LOAD    \"ext4load nand 0:1 0x47000000 logo.bmp; drawbmp 0x47000000\""
     sed -i "s/.*#define.*CONFIG_CMD_LOGO_LOAD.*/${config_logo_load}/g" ${dest_file}
 
-    local config_bootcommand="#define CONFIG_BOOTCOMMAND \"nand read 0x44000000 0xc00000 0x600000;nand read 43000000 0x1800000 400000;bootm 0x44000000\""
+    local config_bootcommand="#define CONFIG_BOOTCOMMAND \"ext4load nand 0:1 0x48000000 uImage;ext4load nand 0:1 0x49000000 root.img.gz;bootm 0x48000000\""
     sed -i "s/#define.*CONFIG_BOOTCOMMAND.*/${config_bootcommand}/g" ${dest_file}
 
     local config_cmd_nand="#define CONFIG_CMD_NAND"
     sed -i "s/\/\/#define.*CONFIG_CMD_NAND/${config_cmd_nand}/g" ${dest_file}
-
-    local config_fastboot_nandbsp="#define CFG_FASTBOOT_NANDBSP"
-    sed -i "s/#define.*CFG_FASTBOOT_SDMMCBSP/${config_fastboot_nandbsp}/g" ${dest_file}
 
     if [ ${VERBOSE} == "true" ]; then
         echo "End"
@@ -215,20 +212,20 @@ function enable_uboot_nand_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_NAND/#define CONFIG_CMD_NAND/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_NAND_FTL/#define CONFIG_NAND_FTL/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
-    sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_UBIFS/#define CONFIG_CMD_UBIFS/g' ${src_file}
-    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"nand read 0x48000000 0xc00000 0x600000;nand read 0x49000000 0x1800000 0x100000;bootm 0x48000000\"/g' ${src_file}
-    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"nand read 0x47000000 0x2000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
-    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"nand read 0x47000000 0x2800000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
-    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"nand read 0x47000000 0x3000000 0x400000; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load nand 0:1 0x48000000 uImage;ext4load nand 0:1 0x49000000 root.img.gz;bootm 0x48000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_WALLPAPERS.*/    #define CONFIG_CMD_LOGO_WALLPAPERS \"ext4load nand 0:1 0x47000000 logo.bmp; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_BATTERY.*/    #define CONFIG_CMD_LOGO_BATTERY \"ext4load nand 0:1 0x47000000 battery.bmp; drawbmp 0x47000000\"/g' ${src_file}
+    sed -i 's/.*#define[[:space:]]CONFIG_CMD_LOGO_UPDATE.*/    #define CONFIG_CMD_LOGO_UPDATE \"ext4load nand 0:1 0x47000000 update.bmp; drawbmp 0x47000000\"/g' ${src_file}
 }
 
 function disable_uboot_nand_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^#define[[:space:]]CONFIG_CMD_NAND/\/\/#define CONFIG_CMD_NAND/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_NAND_FTL/\/\/#define CONFIG_NAND_FTL/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
-    sed -i 's/^#define[[:space:]]CONFIG_CMD_UBIFS/\/\/#define CONFIG_CMD_UBIFS/g' ${src_file}
 }
 
 function apply_uboot_sd_root()
@@ -279,6 +276,7 @@ function build_uboot()
     fi
 }
 
+
 function apply_kernel_nand_config()
 {
     local src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
@@ -286,84 +284,11 @@ function apply_kernel_nand_config()
     local dst_file=${src_file}.nandboot
     cp ${src_file} ${dst_file}
 
-    # cmdline
-    sed -i 's/CONFIG_CMDLINE=.*/CONFIG_CMDLINE=\"console=ttyAMA0,115200n8 ubi.mtd=0 ubi.mtd=1 ubi.mtd=2 androidboot.console=ttyAMA0 init=\/init androidboot.hardware='${BOARD_NAME}' androidboot.serialno=0123456789abcdef\"/g' ${dst_file}
-    # mtd
-    sed -i 's/.*CONFIG_MTD.*/CONFIG_MTD=y/g' ${dst_file}
-    sed -i '/CONFIG_MTD=y/ a\
-# CONFIG_MTD_TESTS is not set' ${dst_file}
-    sed -i '/# CONFIG_MTD_TESTS.*/ a\
-# CONFIG_MTD_REDBOOT_PARTS is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_REDBOOT_PARTS.*/ a\
-CONFIG_MTD_CMDLINE_PARTS=y' ${dst_file}
-    sed -i '/CONFIG_MTD_CMDLINE_PARTS=y/ a\
-# CONFIG_MTD_AFS_PARTS is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_AFS_PARTS.*/ a\
-# CONFIG_MTD_AR7_PARTS is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_AR7_PARTS.*/ a\
-CONFIG_MTD_CHAR=y' ${dst_file}
-    sed -i '/CONFIG_MTD_CHAR=y/ a\
-CONFIG_MTD_BLKDEVS=y' ${dst_file}
-    sed -i '/CONFIG_MTD_BLKDEVS=y/ a\
-CONFIG_MTD_BLOCK=y' ${dst_file}
-    sed -i '/CONFIG_MTD_BLOCK=y/ a\
-# CONFIG_FTL is not set' ${dst_file}
-    sed -i '/CONFIG_FTL.*/ a\
-# CONFIG_NFTL is not set' ${dst_file}
-    sed -i '/CONFIG_NFTL.*/ a\
-# CONFIG_INFTL is not set' ${dst_file}
-    sed -i '/CONFIG_INFTL.*/ a\
-# CONFIG_RFD_FTL is not set' ${dst_file}
-    sed -i '/CONFIG_RFD_FTL.*/ a\
-# CONFIG_SSFDC is not set' ${dst_file}
-    sed -i '/CONFIG_SSFDC.*/ a\
-# CONFIG_SM_FTL is not set' ${dst_file}
-    sed -i '/CONFIG_SM_FTL.*/ a\
-# CONFIG_MTD_OOPS is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_OOPS.*/ a\
-# CONFIG_MTD_CFI is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_CFI.*/ a\
-# CONFIG_MTD_JEDECPROBE is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_JEDECPROBE.*/ a\
-CONFIG_MTD_MAP_BANK_WIDTH_1=y' ${dst_file}
-    sed -i '/CONFIG_MTD_MAP_BANK_WIDTH_1=y/ a\
-CONFIG_MTD_MAP_BANK_WIDTH_2=y' ${dst_file}
-    sed -i '/CONFIG_MTD_MAP_BANK_WIDTH_2=y/ a\
-CONFIG_MTD_MAP_BANK_WIDTH_4=y' ${dst_file}
-    sed -i '/CONFIG_MTD_MAP_BANK_WIDTH_4=y/ a\
-CONFIG_MTD_CFI_I1=y' ${dst_file}
-    sed -i '/CONFIG_MTD_CFI_I1=y/ a\
-CONFIG_MTD_CFI_I2=y' ${dst_file}
-    sed -i '/CONFIG_MTD_CFI_I2=y/ a\
-# CONFIG_MTD_RAM is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_RAM.*/ a\
-# CONFIG_MTD_ROM is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_ROM.*/ a\
-# CONFIG_MTD_ABSENT is not set' ${dst_file}
-    sed -i '/CONFIG_MTD_ABSENT.*/ a\
-CONFIG_MTD_NAND_ECC=y' ${dst_file}
-    sed -i '/CONFIG_MTD_NAND_ECC=y/ a\
-CONFIG_MTD_NAND=y' ${dst_file}
-    sed -i '/CONFIG_MTD_NAND=y/ a\
-CONFIG_MTD_NAND_IDS=y' ${dst_file}
-    sed -i '/CONFIG_MTD_NAND_IDS=y/ a\
-CONFIG_MTD_NAND_NEXELL=y' ${dst_file}
-    sed -i '/CONFIG_MTD_NAND_NEXELL=y/ a\
-CONFIG_MTD_NAND_ECC_HW=y a\
-CONFIG_NAND_RANDOMIZER=y' ${dst_file}
-    sed -i '/CONFIG_MTD_NAND_ECC_HW=y/ a\
-CONFIG_MTD_UBI=y' ${dst_file}
-    sed -i '/CONFIG_MTD_UBI=y/ a\
-CONFIG_MTD_UBI_WL_THRESHOLD=4096' ${dst_file}
-    sed -i '/CONFIG_MTD_UBI_WL_THRESHOLD=.*/ a\
-CONFIG_MTD_UBI_BEB_LIMIT=20' ${dst_file}
-    sed -i '/CONFIG_EFS_FS.*/ a\
-CONFIG_UBIFS_FS=y' ${dst_file}
-    sed -i '/CONFIG_UBIFS_FS=y/ a\
-CONFIG_UBIFS_FS_LZO=y' ${dst_file}
-    sed -i '/CONFIG_UBIFS_FS_LZO=y/ a\
-CONFIG_UBIFS_FS_ZLIB=y' ${dst_file}
-
+	# FTL
+	sed -i 's/.*CONFIG_NXP_FTL .*/ a\
+CONFIG_NXP_FTL=y a\
+CONFIG_NAND_FTL=y' ${dst_file}
+    
     echo ${dst_config}
 }
 
@@ -470,12 +395,15 @@ function make_android_root()
 
     # handle nand boot
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        rm -f fstab.${BOARD_NAME}
-        echo "ubi0:system       /system      ubifs    defaults,noatime,rw    wait" > fstab.${BOARD_NAME}
-        echo "ubi1:cache        /cache       ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-        echo "ubi2:userdata     /data        ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-        local cur_user=`whoami`
-        chown ${cur_user}:${cur_user} fstab.${BOARD_NAME}
+		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p2/\/dev\/block\/mio2/g' fstab.${BOARD_NAME}
+		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p3/\/dev\/block\/mio3/g' fstab.${BOARD_NAME}
+		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p7/\/dev\/block\/mio4/g' fstab.${BOARD_NAME}
+#        rm -f fstab.${BOARD_NAME}
+#        echo "ubi0:system       /system      ubifs    defaults,noatime,rw    wait" > fstab.${BOARD_NAME}
+#        echo "ubi1:cache        /cache       ubifs    noatime                wait" >> fstab.${BOARD_NAME}
+#        echo "ubi2:userdata     /data        ubifs    noatime                wait" >> fstab.${BOARD_NAME}
+#        local cur_user=`whoami`
+#        chown ${cur_user}:${cur_user} fstab.${BOARD_NAME}
     fi
 
     # arrange permission
@@ -747,9 +675,9 @@ function make_boot()
         cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
     fi
 
-    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         make_ext4 ${BOARD_NAME} boot
-    fi
+#    fi
     vmsg "end make_boot"
 }
 
@@ -762,12 +690,12 @@ function make_system()
     #apply_android_overlay
     remove_android_banned_files
 
-    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         #cp ${out_dir}/system.img ${RESULT_DIR}
         make_ext4 ${BOARD_NAME} system
-    else
-        make_ubi_image_for_nand ${BOARD_NAME} system
-    fi
+#    else
+#        make_ubi_image_for_nand ${BOARD_NAME} system
+#    fi
     vmsg "end make_system"
 }
 
@@ -776,11 +704,11 @@ function make_cache()
     vmsg "start make_cache"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/cache ${RESULT_DIR}
-    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         cp ${out_dir}/cache.img ${RESULT_DIR}
-    else
-        make_ubi_image_for_nand ${BOARD_NAME} cache
-    fi
+#    else
+#        make_ubi_image_for_nand ${BOARD_NAME} cache
+#    fi
     vmsg "end make_cache"
 }
 
@@ -789,11 +717,11 @@ function make_userdata()
     vmsg "start make_userdata"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/data ${RESULT_DIR}/userdata
-    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
         cp ${out_dir}/userdata.img ${RESULT_DIR}
-    else
-        make_ubi_image_for_nand ${BOARD_NAME} userdata
-    fi
+#    else
+#        make_ubi_image_for_nand ${BOARD_NAME} userdata
+#    fi
     vmsg "end make_userdata"
 }
 
@@ -813,9 +741,9 @@ function post_process()
 
         cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
 
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            query_nand_sizes ${BOARD_NAME}
-        fi
+#        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+#            query_nand_sizes ${BOARD_NAME}
+#        fi
 
         make_boot
         make_system
@@ -838,9 +766,9 @@ CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 BOARD_PURE_NAME=${BOARD_NAME%_*}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
-clean_up
-build_uboot
-build_kernel
+#clean_up
+#build_uboot
+#build_kernel
 build_module
 build_android
 post_process

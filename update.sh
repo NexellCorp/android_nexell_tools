@@ -138,7 +138,7 @@ function get_board_name()
 function is_sd_device()
 {
     local f="$1"
-    local tmp=$(cat $f | grep dw_mmc | head -n1)
+    local tmp=$(cat $f | grep by-num | head -n1)
     if (( ${#tmp} > 0 )); then
         echo "true"
     else
@@ -149,7 +149,7 @@ function is_sd_device()
 function is_nand_device()
 {
     local f="$1"
-    local tmp=$(cat $f | grep ubi | head -n1)
+    local tmp=$(cat $f | grep mio | head -n1)
     if (( ${#tmp} > 0 )); then
         echo "true"
     else
@@ -591,11 +591,11 @@ function update_userdata()
 {
     if [ ${UPDATE_USERDATA} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         local user_data_size=$(recalc_userdata_size)
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            make_ubi_image_for_nand ${BOARD_NAME} userdata
-        else
+#        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+#            make_ubi_image_for_nand ${BOARD_NAME} userdata
+#        else
             make_ext4 ${BOARD_NAME} userdata ${user_data_size}
-        fi
+#        fi
 
         flash userdata ${RESULT_DIR}/userdata.img
     fi
@@ -616,14 +616,14 @@ get_root_device
 get_root_device_size
 
 update_partitionmap
-update_2ndboot
-update_bootloader
+#update_2ndboot
+#update_bootloader
 change_fstab_for_sd
 
-if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-    update_kernel
-    update_bmp
-else
+#if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+#    update_kernel
+#    update_bmp
+#else
     if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
         update_kernel
         update_rootfs
@@ -631,7 +631,7 @@ else
     else
         update_boot
     fi
-fi
+#fi
 
 update_system
 update_cache
