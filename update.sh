@@ -400,9 +400,14 @@ function apply_uboot_sd_config()
 
 function apply_uboot_nand_config()
 {
+	# freestyle:devel    SDFAT on SVT
     disable_uboot_eeprom
-    #freestyle: not yet
-    #enable_uboot_nand_env
+    #disable_uboot_nand_env
+    #disable_uboot_mmc_env
+
+	# freestyle:release  EEPROM
+	#enable_uboot_eeprom
+    #disable_uboot_nand_env
     #disable_uboot_mmc_env
 }
 
@@ -456,9 +461,10 @@ function update_boot()
 {
     if [ ${UPDATE_BOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_BOOT}  == "true" ]; then
-            if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
-            fi
+            #fi
         fi
         flash boot ${RESULT_DIR}/boot.img
     else
@@ -474,9 +480,10 @@ function update_kernel()
     if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_KERNEL} == "true" ]; then
             cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
-            if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
-            fi
+            #fi
         fi
 
         if [ ! -f ${RESULT_DIR}/boot/uImage ]; then
@@ -484,11 +491,12 @@ function update_kernel()
             exit 1
         fi
 
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            flash kernel ${RESULT_DIR}/boot/uImage
-        else
+		#freestyle:
+        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+        #    flash kernel ${RESULT_DIR}/boot/uImage
+        #else
             update_boot 1
-        fi
+        #fi
     fi
 }
 
@@ -505,17 +513,19 @@ function update_rootfs()
                 exit 1
             fi
 
-            if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
-            fi
+            #fi
         fi
 
 
-        if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+		#freestyle:
+        #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             update_boot 1
-        else
-            flash ramdisk ${RESULT_DIR}/boot/root.img.gz
-        fi
+        #else
+        #    flash ramdisk ${RESULT_DIR}/boot/root.img.gz
+        #fi
     fi
 }
 
@@ -525,24 +535,26 @@ function update_bmp()
         if [ ${UPDATE_BMP} == "true" ]; then
             copy_bmp_files_to_boot
 
-            if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
                 make_ext4 ${BOARD_NAME} boot
-            fi
+            #fi
         fi
 
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            cd ${RESULT_DIR}/boot
-            local bmp_file=
-            local update_file=
-            for bmp_file in $(ls *.bmp)
-            do
-                update_file=${bmp_file%%.bmp}
-                flash ${update_file} ${bmp_file}
-            done
-            cd ${TOP}
-        else
+		#freestyle:
+        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+        #    cd ${RESULT_DIR}/boot
+        #    local bmp_file=
+        #    local update_file=
+        #    for bmp_file in $(ls *.bmp)
+        #    do
+        #        update_file=${bmp_file%%.bmp}
+        #        flash ${update_file} ${bmp_file}
+        #    done
+        #    cd ${TOP}
+        #else
             update_boot 1
-        fi
+        #fi
     fi
 }
 
@@ -550,11 +562,12 @@ function update_system()
 {
     if [ ${UPDATE_SYSTEM} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_SYSTEM} == "true" ]; then
-            if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-                make_ubi_image_for_nand ${BOARD_NAME} system
-            else
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            #    make_ubi_image_for_nand ${BOARD_NAME} system
+            #else
                 make_ext4 ${BOARD_NAME} system
-            fi
+            #fi
         fi
 
         flash system ${RESULT_DIR}/system.img
@@ -565,11 +578,12 @@ function update_cache()
 {
     if [ ${UPDATE_CACHE} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_CACHE} == "true" ]; then
-            if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-                make_ubi_image_for_nand ${BOARD_NAME} cache
-            else
+			#freestyle:
+            #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            #    make_ubi_image_for_nand ${BOARD_NAME} cache
+            #else
                 make_ext4 ${BOARD_NAME} cache
-            fi
+            #fi
         fi
 
         flash cache ${RESULT_DIR}/cache.img

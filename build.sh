@@ -396,15 +396,17 @@ function make_android_root()
 
     # handle nand boot
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p2/\/dev\/block\/mio2/g' fstab.${BOARD_NAME}
-		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p3/\/dev\/block\/mio3/g' fstab.${BOARD_NAME}
-		sed -i 's/\/dev\/block\/platform\/dw_mmc.0\/by-num\/p7/\/dev\/block\/mio4/g' fstab.${BOARD_NAME}
-#        rm -f fstab.${BOARD_NAME}
-#        echo "ubi0:system       /system      ubifs    defaults,noatime,rw    wait" > fstab.${BOARD_NAME}
-#        echo "ubi1:cache        /cache       ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-#        echo "ubi2:userdata     /data        ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-#        local cur_user=`whoami`
-#        chown ${cur_user}:${cur_user} fstab.${BOARD_NAME}
+		sed -i 's/.*\/dev.*\/p2.*/\/dev\/block\/mio2              \/system             ext4      rw                                                            wait/g' fstab.${BOARD_NAME}
+		sed -i 's/.*\/dev.*\/p3.*/\/dev\/block\/mio3              \/cache              ext4      noatime,nosuid,nodev,nomblk_io_submit,discard,errors=panic    wait,check/g' fstab.${BOARD_NAME}
+		sed -i 's/.*\/dev.*\/p7.*/\/dev\/block\/mio7              \/data               ext4      noatime,nosuid,nodev,nomblk_io_submit,discard,errors=panic    wait,check/g' fstab.${BOARD_NAME}
+
+		#freestyle
+		#rm -f fstab.${BOARD_NAME}
+		#echo "ubi0:system       /system      ubifs    defaults,noatime,rw    wait" > fstab.${BOARD_NAME}
+		#echo "ubi1:cache        /cache       ubifs    noatime                wait" >> fstab.${BOARD_NAME}
+		#echo "ubi2:userdata     /data        ubifs    noatime                wait" >> fstab.${BOARD_NAME}
+		#local cur_user=`whoami`
+		#chown ${cur_user}:${cur_user} fstab.${BOARD_NAME}
     fi
 
     # arrange permission
@@ -600,9 +602,10 @@ function build_dist()
         ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
         cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
         cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
-        if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
+		#freestyle
+        #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             make_ext4 ${BOARD_NAME} boot
-        fi
+        #fi
         cp ${RESULT_DIR}/boot.img ${tmpdir}/BOOTABLE_IMAGES
         cp out/target/product/${BOARD_NAME}/recovery.img ${tmpdir}/BOOTABLE_IMAGES
         if [ ${OTA_UPDATE_UBOOT} == "true" ] || [ ${OTA_UPDATE_2NDBOOT} == "true" ]; then
