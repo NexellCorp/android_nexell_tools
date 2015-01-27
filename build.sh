@@ -204,7 +204,7 @@ function disable_uboot_sd_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     echo "src_file: ${src_file}"
-    #freestyle: not yet
+    #freestyle:release)
     #sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
@@ -399,14 +399,6 @@ function make_android_root()
 		sed -i 's/.*\/dev.*\/p2.*/\/dev\/block\/mio2              \/system             ext4      rw                                                            wait/g' fstab.${BOARD_NAME}
 		sed -i 's/.*\/dev.*\/p3.*/\/dev\/block\/mio3              \/cache              ext4      noatime,nosuid,nodev,nomblk_io_submit,discard,errors=panic    wait,check/g' fstab.${BOARD_NAME}
 		sed -i 's/.*\/dev.*\/p7.*/\/dev\/block\/mio7              \/data               ext4      noatime,nosuid,nodev,nomblk_io_submit,discard,errors=panic    wait,check/g' fstab.${BOARD_NAME}
-
-		#freestyle
-		#rm -f fstab.${BOARD_NAME}
-		#echo "ubi0:system       /system      ubifs    defaults,noatime,rw    wait" > fstab.${BOARD_NAME}
-		#echo "ubi1:cache        /cache       ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-		#echo "ubi2:userdata     /data        ubifs    noatime                wait" >> fstab.${BOARD_NAME}
-		#local cur_user=`whoami`
-		#chown ${cur_user}:${cur_user} fstab.${BOARD_NAME}
     fi
 
     # arrange permission
@@ -745,9 +737,9 @@ function post_process()
 
         cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
 
-#        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-#            query_nand_sizes ${BOARD_NAME}
-#        fi
+        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            query_nand_sizes ${BOARD_NAME}
+        fi
 
         make_boot
         make_system

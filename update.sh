@@ -243,17 +243,18 @@ function create_partmap_for_spirom()
     fi
 
     echo "flash=eeprom,0:2ndboot:2nd:0x0,0x4000;" > ${partmap_file}
-    echo "flash=eeprom,0:bootloader:boot:0x10000,0x70000;" >> ${partmap_file}
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        echo "flash=nand,0:kernel:raw:0xc00000,0x600000;" >> ${partmap_file}
-        echo "flash=nand,0:bootlogo:raw:0x2000000,0x400000;" >> ${partmap_file}
-        echo "flash=nand,0:battery:raw:0x2800000,0x400000;" >> ${partmap_file}
-        echo "flash=nand,0:update:raw:0x3000000,0x400000;" >> ${partmap_file}
-        echo "flash=nand,0:system:ubi:0x4000000,0x20000000;" >> ${partmap_file}
-        echo "flash=nand,0:cache:ubi:0x24000000,0x10000000;" >> ${partmap_file}
-        echo "flash=nand,0:userdata:ubi:0x34000000,0x0;" >> ${partmap_file}
+        echo "flash=nand,0:bootrecovery:factory:0x2000000,0x2000000;" >> ${partmap_file}
+        echo "flash=nand,0:bootloader:boot:0x4000000,0x2000000;" >> ${partmap_file}
+        echo "flash=nand,0:boot:ext4:0x00100000,0x4000000;" >> ${partmap_file}
+        echo "flash=nand,0:system:ext4:0x04100000,0x2F200000;" >> ${partmap_file}
+        echo "flash=nand,0:cache:ext4:0x33300000,0x1AC00000;" >> ${partmap_file}
+        echo "flash=nand,0:misc:emmc:0x4E000000,0x00800000;" >> ${partmap_file}
+        echo "flash=nand,0:recovery:emmc:0x4E900000,0x01600000;" >> ${partmap_file}
+        echo "flash=nand,0:userdata:ext4:0x50000000,0x0;" >> ${partmap_file}
     else
         local dev_num=${ROOT_DEVICE_TYPE#sd}
+		echo "flash=eeprom,0:bootloader:boot:0x10000,0x70000;" >> ${partmap_file}
         echo "flash=mmc,${dev_num}:boot:ext4:0x00100000,0x04000000;" >> ${partmap_file}
         echo "flash=mmc,${dev_num}:system:ext4:0x04100000,0x28E00000;" >> ${partmap_file}
         echo "flash=mmc,${dev_num}:cache:ext4:0x2CF00000,0x21000000;" >> ${partmap_file}
@@ -294,7 +295,7 @@ function update_2ndboot()
         local nsih_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/nsih
         local secondboot_file=
         local nsih_file=
-        local option_d=other
+        local option_d="-d other"
         local option_p=
         local option_b=
         case ${BOOT_DEVICE_TYPE} in
@@ -309,10 +310,13 @@ function update_2ndboot()
                 option_b="SD"
                 ;;
             nand)
+				local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
+				local page_size=$(echo ${nand_sizes} | awk '{print $1}')
+
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_nand.bin
                 nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_nand.txt
-                option_d=nand
-                option_p="-p 8192"
+                option_d="-d nand"
+                option_p="-p ${page_size}"
                 ;;
         esac
 
@@ -329,9 +333,13 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot -d ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
         #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -t 2ndboot -b ${option_b} -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
-        ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+		else
+			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+		fi
         sync
         sleep 1
         echo "call fastboot"
@@ -400,12 +408,12 @@ function apply_uboot_sd_config()
 
 function apply_uboot_nand_config()
 {
-	# freestyle:devel    SDFAT on SVT
+	# freestyle:devel)    SDFAT on SVT
     disable_uboot_eeprom
     #disable_uboot_nand_env
     #disable_uboot_mmc_env
 
-	# freestyle:release  EEPROM
+	# freestyle:release)  EEPROM
 	#enable_uboot_eeprom
     #disable_uboot_nand_env
     #disable_uboot_mmc_env
@@ -461,10 +469,7 @@ function update_boot()
 {
     if [ ${UPDATE_BOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_BOOT}  == "true" ]; then
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-                make_ext4 ${BOARD_NAME} boot
-            #fi
+			make_ext4 ${BOARD_NAME} boot
         fi
         flash boot ${RESULT_DIR}/boot.img
     else
@@ -480,10 +485,7 @@ function update_kernel()
     if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_KERNEL} == "true" ]; then
             cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-                make_ext4 ${BOARD_NAME} boot
-            #fi
+            make_ext4 ${BOARD_NAME} boot
         fi
 
         if [ ! -f ${RESULT_DIR}/boot/uImage ]; then
@@ -491,12 +493,7 @@ function update_kernel()
             exit 1
         fi
 
-		#freestyle:
-        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        #    flash kernel ${RESULT_DIR}/boot/uImage
-        #else
             update_boot 1
-        #fi
     fi
 }
 
@@ -513,19 +510,11 @@ function update_rootfs()
                 exit 1
             fi
 
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-                make_ext4 ${BOARD_NAME} boot
-            #fi
+			make_ext4 ${BOARD_NAME} boot
         fi
 
 
-		#freestyle:
-        #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             update_boot 1
-        #else
-        #    flash ramdisk ${RESULT_DIR}/boot/root.img.gz
-        #fi
     fi
 }
 
@@ -535,26 +524,10 @@ function update_bmp()
         if [ ${UPDATE_BMP} == "true" ]; then
             copy_bmp_files_to_boot
 
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-                make_ext4 ${BOARD_NAME} boot
-            #fi
+			make_ext4 ${BOARD_NAME} boot
         fi
 
-		#freestyle:
-        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-        #    cd ${RESULT_DIR}/boot
-        #    local bmp_file=
-        #    local update_file=
-        #    for bmp_file in $(ls *.bmp)
-        #    do
-        #        update_file=${bmp_file%%.bmp}
-        #        flash ${update_file} ${bmp_file}
-        #    done
-        #    cd ${TOP}
-        #else
-            update_boot 1
-        #fi
+		update_boot 1
     fi
 }
 
@@ -562,12 +535,7 @@ function update_system()
 {
     if [ ${UPDATE_SYSTEM} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_SYSTEM} == "true" ]; then
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            #    make_ubi_image_for_nand ${BOARD_NAME} system
-            #else
-                make_ext4 ${BOARD_NAME} system
-            #fi
+			make_ext4 ${BOARD_NAME} system
         fi
 
         flash system ${RESULT_DIR}/system.img
@@ -578,12 +546,7 @@ function update_cache()
 {
     if [ ${UPDATE_CACHE} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_CACHE} == "true" ]; then
-			#freestyle:
-            #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            #    make_ubi_image_for_nand ${BOARD_NAME} cache
-            #else
-                make_ext4 ${BOARD_NAME} cache
-            #fi
+			make_ext4 ${BOARD_NAME} cache
         fi
 
         flash cache ${RESULT_DIR}/cache.img
@@ -631,24 +594,18 @@ get_root_device
 get_root_device_size
 
 update_partitionmap
-#freestyle: not yet
+#freestyle: release)
 #update_2ndboot
 #update_bootloader
 change_fstab_for_sd
 
-#freestyle: 
-#if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-#    update_kernel
-#    update_bmp
-#else
-    if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
-        update_kernel
-        update_rootfs
-        update_bmp
-    else
-        update_boot
-    fi
-#fi
+if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
+	update_kernel
+	update_rootfs
+	update_bmp
+else
+	update_boot
+fi
 
 update_system
 update_cache
