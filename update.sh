@@ -408,12 +408,12 @@ function apply_uboot_sd_config()
 
 function apply_uboot_nand_config()
 {
-	# freestyle:devel)    SDFAT on SVT
+	# nand:devel)    SDFAT on SVT
     disable_uboot_eeprom
     #disable_uboot_nand_env
     #disable_uboot_mmc_env
 
-	# freestyle:release)  EEPROM
+	# nand:release)  EEPROM
 	#enable_uboot_eeprom
     #disable_uboot_nand_env
     #disable_uboot_mmc_env
@@ -594,7 +594,7 @@ get_root_device
 get_root_device_size
 
 update_partitionmap
-#freestyle: release)
+#nand: release)
 #update_2ndboot
 #update_bootloader
 change_fstab_for_sd

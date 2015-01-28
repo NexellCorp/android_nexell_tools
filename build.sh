@@ -204,7 +204,7 @@ function disable_uboot_sd_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     echo "src_file: ${src_file}"
-    #freestyle:release)
+    #nand:release)
     #sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
@@ -594,7 +594,7 @@ function build_dist()
         ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
         cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
         cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
-		#freestyle
+		#nand
         #if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
             make_ext4 ${BOARD_NAME} boot
         #fi
