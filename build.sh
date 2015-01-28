@@ -762,7 +762,7 @@ CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 BOARD_PURE_NAME=${BOARD_NAME%_*}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
-#clean_up
+clean_up
 build_uboot
 build_kernel
 build_module
