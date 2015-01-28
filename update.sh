@@ -569,11 +569,7 @@ function update_userdata()
 {
     if [ ${UPDATE_USERDATA} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         local user_data_size=$(recalc_userdata_size)
-#        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-#            make_ubi_image_for_nand ${BOARD_NAME} userdata
-#        else
-            make_ext4 ${BOARD_NAME} userdata ${user_data_size}
-#        fi
+		make_ext4 ${BOARD_NAME} userdata ${user_data_size}
 
         flash userdata ${RESULT_DIR}/userdata.img
     fi
