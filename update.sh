@@ -594,6 +594,7 @@ if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 #nand: release)
 #update_2ndboot
 #update_bootloader
+	vmsg ""
 else
 update_2ndboot
 update_bootloader
