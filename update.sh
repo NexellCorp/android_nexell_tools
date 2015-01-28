@@ -590,9 +590,14 @@ get_root_device
 get_root_device_size
 
 update_partitionmap
+if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 #nand: release)
 #update_2ndboot
 #update_bootloader
+else
+update_2ndboot
+update_bootloader
+fi
 change_fstab_for_sd
 
 if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
