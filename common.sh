@@ -318,7 +318,7 @@ function query_nand_sizes()
         printf "%-20.30s %5s %s\n" "NAND Total Size in MegaBytes" ":" "${total_size}"
 
         choice "is right?[Y/n] "
-        if [ -z ${CHOICE} ] || [ ${CHOICE} == "y" ]; then
+        if [ -z ${CHOICE} ] || [ ${CHOICE} == "y" ] || [ ${CHOICE} == "Y" ]; then
             is_right=true
         fi
 
