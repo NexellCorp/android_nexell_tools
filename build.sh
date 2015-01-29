@@ -286,9 +286,7 @@ function apply_kernel_nand_config()
     cp ${src_file} ${dst_file}
 
 	# FTL
-	sed -i 's/.*CONFIG_NXP_FTL .*/ a\
-CONFIG_NXP_FTL=y a\
-CONFIG_NAND_FTL=y/g' ${dst_file}
+	sed -i 's/.*CONFIG_NXP_FTL .*/CONFIG_NXP_FTL=y\nCONFIG_NAND_FTL=y/g' ${dst_file}
     
     echo ${dst_config}
 }
