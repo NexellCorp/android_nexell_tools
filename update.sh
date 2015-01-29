@@ -336,7 +336,7 @@ function update_2ndboot()
         #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
         #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -t 2ndboot -b ${option_b} -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
 		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
 		else
 			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
 		fi
@@ -409,14 +409,14 @@ function apply_uboot_sd_config()
 function apply_uboot_nand_config()
 {
 	# nand:devel)    SDFAT on SVT
-    disable_uboot_eeprom
-    #disable_uboot_nand_env
-    #disable_uboot_mmc_env
+    #disable_uboot_eeprom
+    ###disable_uboot_nand_env
+    ###disable_uboot_mmc_env
 
 	# nand:release)  EEPROM
-	#enable_uboot_eeprom
-    #disable_uboot_nand_env
-    #disable_uboot_mmc_env
+	enable_uboot_eeprom
+    disable_uboot_nand_env
+    disable_uboot_mmc_env
 }
 
 function update_bootloader()
@@ -453,9 +453,14 @@ function update_bootloader()
         if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
             local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
+			local load_addr="0x42c00000"
+			local launch_addr="0x42c00000"
+			#change this
+			local bootrecovery_file="u-boot.ecc"
 
-            ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size}
+            ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
+            flash bootrecovery ${RESULT_DIR}/${bootrecovery_file}
             flash bootloader ${RESULT_DIR}/u-boot.ecc
         else
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.bin"
@@ -592,9 +597,8 @@ get_root_device_size
 update_partitionmap
 if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 #nand: release)
-#update_2ndboot
-#update_bootloader
-	vmsg ""
+update_2ndboot
+update_bootloader
 else
 update_2ndboot
 update_bootloader

@@ -669,9 +669,7 @@ function make_boot()
         cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
     fi
 
-#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-        make_ext4 ${BOARD_NAME} boot
-#    fi
+	make_ext4 ${BOARD_NAME} boot
     vmsg "end make_boot"
 }
 
@@ -684,12 +682,9 @@ function make_system()
     #apply_android_overlay
     remove_android_banned_files
 
-#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-        #cp ${out_dir}/system.img ${RESULT_DIR}
-        make_ext4 ${BOARD_NAME} system
-#    else
-#        make_ubi_image_for_nand ${BOARD_NAME} system
-#    fi
+    #cp ${out_dir}/system.img ${RESULT_DIR}
+    make_ext4 ${BOARD_NAME} system
+		
     vmsg "end make_system"
 }
 
@@ -698,11 +693,8 @@ function make_cache()
     vmsg "start make_cache"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/cache ${RESULT_DIR}
-#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-        cp ${out_dir}/cache.img ${RESULT_DIR}
-#    else
-#        make_ubi_image_for_nand ${BOARD_NAME} cache
-#    fi
+	cp ${out_dir}/cache.img ${RESULT_DIR}
+
     vmsg "end make_cache"
 }
 
@@ -711,11 +703,8 @@ function make_userdata()
     vmsg "start make_userdata"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/data ${RESULT_DIR}/userdata
-#    if [ ${ROOT_DEVICE_TYPE} != "nand" ]; then
-        cp ${out_dir}/userdata.img ${RESULT_DIR}
-#    else
-#        make_ubi_image_for_nand ${BOARD_NAME} userdata
-#    fi
+	cp ${out_dir}/userdata.img ${RESULT_DIR}
+
     vmsg "end make_userdata"
 }
 
