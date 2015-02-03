@@ -458,6 +458,11 @@ function update_bootloader()
 			#change this
 			local bootrecovery_file="u-boot.ecc"
 
+			if [ -z ${NSIH_FILE} ]; then
+				echo "update with 2ndboot" 
+				exit 1
+			fi
+
             ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootrecovery ${RESULT_DIR}/${bootrecovery_file}
@@ -597,6 +602,9 @@ get_root_device_size
 update_partitionmap
 if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 #nand: release)
+export ANDROID_VERSION_MAJOR=$(get_android_version_major)
+set_android_toolchain_and_check
+
 update_2ndboot
 update_bootloader
 else
