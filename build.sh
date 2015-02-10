@@ -17,7 +17,8 @@ ROOT_DEVICE_TYPE=sd
 WIFI_DEVICE_NAME=rtl8188
 #BUILD_TAG=user
 BUILD_TAG=userdebug
-WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
+#WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
+WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188C_8192C_usb_linux_v4.0.5_11249.20140422"
 VERBOSE=false
 ## OTA variables
 OTA_INCREMENTAL=false
