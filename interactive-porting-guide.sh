@@ -4,7 +4,11 @@ set -e
 
 TOP=$(pwd)
 
-BOARD=
+P_NAME=
+PLAT_NAME=
+T_BOARD=
+T_OS=
+S_BOARD=
 ROOT_DEVICE_TYPE=
 ROOT_DEVICE_SIZE_IN_GB=
 MAIN_SD_DEVICE_NUMBER=
@@ -35,17 +39,64 @@ function print_startup()
     echo
 }
 
+function query_target_platform()
+{
+    local plat="s5p4418 s5p6818"
+    printf "===> %-30.30s\n" "select target platform"
+    select plat in ${plat}; do
+        if [ -n ${plat} ]; then
+            P_NAME=${plat}
+            PLAT_NAME=plat-${plat}
+            break
+        fi
+    done
+    vmsg "TARET PLATFORM: ${P_NAME}"
+    echo
+}
+
+function query_target_os()
+{
+    local os="lollipop other"
+    printf "===> %-30.30s\n" "select target os"
+    select os in ${os}; do
+        if [ -n ${os} ]; then
+            T_OS=${os}
+            break
+        fi
+    done
+    vmsg "TARGET OS: ${T_OS}"
+    echo
+
+		if [ ${T_OS} == 'other' ]; then
+        T_OS=""
+    fi
+}
+
+function query_source_board()
+{
+    local boards=$(get_kernel_source_board_list)
+    printf "===> %-30.30s\n" "select your source board"
+    select board in ${boards}; do
+        if [ -n ${board} ]; then
+            S_BOARD=${board}
+            break
+        fi
+    done
+    vmsg "SOURCE BOARD: ${S_BOARD}"
+    echo
+}
+
 function query_target_board()
 {
     local boards=$(get_kernel_board_list)
     printf "===> %-30.30s\n" "select your target board"
     select board in ${boards}; do
         if [ -n ${board} ]; then
-            BOARD=${board}
+            T_BOARD=${board}
             break
         fi
     done
-    vmsg "BOARD: ${BOARD}"
+    vmsg "TARGET BOARD: ${T_BOARD}"
     echo
 }
 
@@ -93,7 +144,7 @@ function query_main_sd_device_number()
 
 function query_has_camera()
 {
-    choice "===> ${BOARD} has camera?[Y/n] : "
+    choice "===> ${T_BOARD} has camera?[Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_CAMERA=true
     else
@@ -105,7 +156,7 @@ function query_has_camera()
 
 function query_has_sensor()
 {
-    choice "===> ${BOARD} has sensor?[Y/n] : "
+    choice "===> ${T_BOARD} has sensor?[Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_SENSOR=true
     else
@@ -117,19 +168,19 @@ function query_has_sensor()
 
 function query_has_touch()
 {
-    choice "===> ${BOARD} has touch?[Y/n] : "
+    choice "===> ${T_BOARD} has touch?[Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_TOUCH=true
     else
         HAS_TOUCH=false
     fi
-    vmsg "HAS_SENSOR: ${HAS_SENSOR}"
+    vmsg "HAS_TOUCH: ${HAS_TOUCH}"
     echo
 }
 
 function query_has_bluetooth()
 {
-    choice "===> ${BOARD} has bluetooth? [Y/n] : "
+    choice "===> ${T_BOARD} has bluetooth? [Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_BLUETOOTH=true
     else
@@ -141,7 +192,7 @@ function query_has_bluetooth()
 
 function query_has_sd_storage()
 {
-    choice "===> ${BOARD} has external sd card slot? [Y/n] : "
+    choice "===> ${T_BOARD} has external sd card slot? [Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_SD_STORAGE=true
     else
@@ -153,7 +204,7 @@ function query_has_sd_storage()
 
 function query_has_usb_storage()
 {
-    choice "===> ${BOARD} has usb host slot? [Y/n] : "
+    choice "===> ${T_BOARD} has usb host slot? [Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_USB_STORAGE=true
     else
@@ -165,7 +216,7 @@ function query_has_usb_storage()
 
 function query_has_otg_storage()
 {
-    choice "===> ${BOARD} support usb memory through otg interface? [Y/n] : "
+    choice "===> ${T_BOARD} support usb memory through otg interface? [Y/n] : "
     if [ ${CHOICE} == 'y' ]; then
         HAS_OTG_STORAGE=true
     else
@@ -203,7 +254,8 @@ function base_porting()
     printf "%b\n"  "------------------------"
     printf "%b\n"  " Base Porting"
     printf "%b\n"  "------------------------"
-    local b_option="-b ${BOARD}"
+    local s_option="-s ${S_BOARD}"
+    local b_option="-b ${T_BOARD}_${P_NAME}"
     local r_option="-r ${ROOT_DEVICE_TYPE}"
     local z_option="-z ${ROOT_DEVICE_SIZE_IN_GB}"
     local m_option=""
@@ -238,6 +290,7 @@ function base_porting()
         n_otg_storage="-n otg-storage"
     fi
     ${TOP}/device/nexell/tools/base-porting.sh -v \
+        ${s_option} \
         ${b_option} \
         ${r_option} \
         ${z_option} \
@@ -257,7 +310,7 @@ function camera_porting()
     printf "%b\n"  "------------------------"
     printf "%b\n"  " Camera Porting"
     printf "%b\n"  "------------------------"
-    ${TOP}/device/nexell/tools/camera-porting.sh -v -b ${BOARD}
+    ${TOP}/device/nexell/tools/camera-porting.sh -v -b ${T_BOARD} -p ${P_NAME}
     echo
 }
 
@@ -266,7 +319,7 @@ function v4l2_porting()
     printf "%b\n"  "------------------------"
     printf "%b\n"  " V4L2 Porting"
     printf "%b\n"  "------------------------"
-    ${TOP}/device/nexell/tools/v4l2-porting.sh -v -b ${BOARD}
+    ${TOP}/device/nexell/tools/v4l2-porting.sh -v -b ${T_BOARD} -p ${P_NAME} -o ${T_OS}
     echo
 }
 
@@ -275,7 +328,7 @@ function touch_porting()
     printf "%b\n"  "------------------------"
     printf "%b\n"  " Touch Porting"
     printf "%b\n"  "------------------------"
-    ${TOP}/device/nexell/tools/touch-porting.sh -v -b ${BOARD}
+    ${TOP}/device/nexell/tools/touch-porting.sh -v -b ${T_BOARD} -p ${P_NAME}
     echo
 }
 
@@ -284,7 +337,7 @@ function sensor_porting()
     printf "%b\n"  "------------------------"
     printf "%b\n"  " Sensor Porting"
     printf "%b\n"  "------------------------"
-    ${TOP}/device/nexell/tools/sensor-porting.sh -v -b ${BOARD}
+    ${TOP}/device/nexell/tools/sensor-porting.sh -v -b ${T_BOARD} -p ${P_NAME}
     echo
 }
 ###########################################################################
@@ -293,6 +346,9 @@ check_top
 source ${TOP}/device/nexell/tools/common.sh
 
 print_startup
+query_target_platform
+query_target_os
+query_source_board
 query_target_board
 query_root_device_type
 query_root_device_size
