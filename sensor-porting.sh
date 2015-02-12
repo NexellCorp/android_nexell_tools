@@ -7,6 +7,7 @@ export TOP
 
 VERBOSE=false
 BOARD=
+PLAT=
 SENSOR_TYPE=
 
 function check_top()
@@ -32,6 +33,7 @@ function parse_args()
     while true; do
         case "$1" in
             -b ) BOARD=$2; shift 2 ;;
+            -p ) PLAT=$2; shift 2 ;;
             -h ) usage; exit 1 ;;
             -v ) VERBOSE=true; shift 1 ;;
             -- ) break ;;
@@ -42,7 +44,7 @@ function parse_args()
 
 function is_sensor_exist()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}/BoardConfig.mk
+    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
     local board_has_sensor=$(awk '/BOARD_HAS_SENSOR/ {print $3}' ${src_file})
     if [ ${board_has_sensor} == "false" ]; then
         #echo "${BOARD} don't have sensor!!!"
@@ -77,7 +79,7 @@ function check_sensor_type()
 
 function apply_sensor_type()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}/BoardConfig.mk
+    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
 
     if [ ${SENSOR_TYPE} == "ANOTHER" ]; then
         echo "======================================================="

@@ -7,6 +7,8 @@ export TOP
 
 VERBOSE=false
 BOARD=
+PLAT=
+OS=
 CAMERA_NUM=
 
 function check_top()
@@ -26,12 +28,14 @@ function usage()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:hv" -- "$@"`
+    TEMP=`getopt -o "o:p:b:hv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
         case "$1" in
             -b ) BOARD=$2; shift 2 ;;
+            -p ) PLAT=$2; shift 2 ;;
+            -o ) OS=$2; shift 2 ;;
             -h ) usage; exit 1 ;;
             -v ) VERBOSE=true; shift 1 ;;
             -- ) break ;;
@@ -42,8 +46,14 @@ function parse_args()
 
 function check_kernel_porting()
 {
+		local str_os=""
+		if [ -n ${OS} ]; then
+   		str_os=${OS}_  
+    fi
+
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/${PLAT}_${board}_android_${str_os}defconfig
+
     if [ ! -f ${src_file} ]; then
         echo "can't find kernel config for ${board}"
         echo "try after create ${src_file}!!!"
@@ -55,8 +65,13 @@ function get_use_decimator()
 {
     check_kernel_porting
 
+		local str_os=""
+		if [ -n ${OS} ]; then
+   		str_os=${OS}_  
+    fi
+
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/${PLAT}_${board}_android_${str_os}defconfig
     grep -q CONFIG_NXP_CAPTURE_DECIMATOR=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"
@@ -68,9 +83,14 @@ function get_use_decimator()
 function get_use_hdmi()
 {
     check_kernel_porting
+		
+		local str_os=""
+		if [ -n ${OS} ]; then
+   		str_os=${OS}_  
+    fi
 
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/${PLAT}_${board}_android_${str_os}defconfig
     grep -q CONFIG_NXP_OUT_HDMI=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"
@@ -83,8 +103,13 @@ function get_use_resol()
 {
     check_kernel_porting
 
+		local str_os=""
+		if [ -n ${OS} ]; then
+   		str_os=${OS}_  
+    fi
+
     local board=${BOARD}
-    local src_file=${TOP}/kernel/arch/arm/configs/s5p4418_${board}_android_defconfig
+    local src_file=${TOP}/kernel/arch/arm/configs/${PLAT}_${board}_android_${str_os}defconfig
     grep -q CONFIG_NXP_OUT_RESOLUTION_CONVERTER=y ${src_file}
     if [ $? -eq 0 ]; then
         echo "true"
@@ -96,6 +121,8 @@ function get_use_resol()
 function make_android_nxp_v4l2_cpp()
 {
     local board=${BOARD}
+    local plat=${PLAT}
+
     if [ -z "${board}" ]; then
         echo "you must set board name"
         exit 1
@@ -111,7 +138,7 @@ function make_android_nxp_v4l2_cpp()
     local use_resol=false
     local use_hdmi=false
 
-    local dst_file=${TOP}/device/nexell/${board}/v4l2/android-nxp-v4l2.cpp
+    local dst_file=${TOP}/device/nexell/${board}_${plat}/v4l2/android-nxp-v4l2.cpp
     rm -f ${dst_file}
 
     if (( ${CAMERA_NUM} > 0 )); then
@@ -130,6 +157,7 @@ function make_android_nxp_v4l2_cpp()
     fi
 
     use_resol=$(get_use_resol)
+
 
     echo "#include <android-nxp-v4l2.h>
 #include \"nxp-v4l2.h\"
@@ -180,7 +208,7 @@ parse_args "$@"
 export VERBOSE
 
 query_board
-vmsg "BOARD: ${BOARD}"
+vmsg "BOARD: ${BOARD}_${PLAT}"
 
 CAMERA_NUM=$(get_camera_number ${BOARD})
 vmsg "CAMERA_NUM: ${CAMERA_NUM}"

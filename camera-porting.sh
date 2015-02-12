@@ -7,6 +7,7 @@ export TOP
 
 VERBOSE=false
 BOARD=
+PLAT=
 CAMERA_NUMBER=
 BACK_CAMERA_NAME=
 FRONT_CAMERA_NAME=
@@ -36,12 +37,13 @@ function usage()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:hv" -- "$@"`
+    TEMP=`getopt -o "p:b:hv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
         case "$1" in
             -b ) BOARD=$2; shift 2 ;;
+            -p ) PLAT=$2; shift 2 ;;
             -h ) usage; exit 1 ;;
             -v ) VERBOSE=true; shift 1 ;;
             -- ) break ;;
@@ -52,10 +54,10 @@ function parse_args()
 
 function check_camera()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}/BoardConfig.mk
+    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
     local board_has_camera=$(grep 'BOARD_HAS_CAMERA' ${src_file} | cut -d' ' -f3)
     if [ ${board_has_camera} == "false" ]; then
-        echo "You don't have to port camera, your board ${BOARD} don't have camera!!!"
+        echo "You don't have to port camera, your board ${BOARD}_${PLAT} don't have camera!!!"
         exit 1
     fi
 }
@@ -64,7 +66,7 @@ function query_camera_number()
 {
     echo "===================================="
     until [ ${CAMERA_NUMBER} ]; do
-        local input=$(get_userinput_number "Enter ${BOARD}'s camera number(1 or 2): ")
+        local input=$(get_userinput_number "Enter ${BOARD}_${PLAT}'s camera number(1 or 2): ")
         if [ ${input} == "invalid" ]; then
             echo "You must enter only Number!!!(1~2)"
         else
@@ -161,7 +163,7 @@ function check_camera_v4l2_id()
 
 function base_kernel_check()
 {
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c
     if [ ! -f ${src_file} ]; then
         echo "You must port ${BOARD} in kernel!!!"
         exit 1
@@ -181,7 +183,7 @@ function get_camera_name()
 {
     camera_name_arg_check ${1}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c
     local search="${1}_camera_i2c_boardinfo"
     local name=$(awk '/'"${search}"'/{getline; getline; print $0}' ${src_file} | awk '/I2C_BOARD_INFO/{print $0}' |\
         cut -d'(' -f2 | cut -d',' -f1 | sed 's/[[:punct:]]//g')
@@ -192,9 +194,9 @@ function get_camera_v4l2_id()
 {
     camera_name_arg_check ${1}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c
     # first search
-    local tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; print $3}' ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c |\
+    local tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; print $3}' ${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c |\
          grep ${1}_camera)
     if [ ${tmp} ]; then
         echo "nxp_v4l2_sensor0"
@@ -204,7 +206,7 @@ function get_camera_v4l2_id()
         else
             # second search
             tmp=$(awk '/nxp_v4l2_i2c_board_info sensor/{getline; getline; getline; getline; getline; getline; print $3}'\
-                 ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c | grep ${1}_camera)
+                 ${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c | grep ${1}_camera)
             if [ ${tmp} ]; then
                 echo "nxp_v4l2_sensor1"
             else
@@ -217,7 +219,7 @@ function get_camera_v4l2_id()
 function is_camera_mipi()
 {
     camera_name_arg_check ${1}
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c
+    local src_file=${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c
     local search=
     if [ -${1} == "back" ];then
         search="sensor\[${BACK_CAMERA_V4L2_ID#nxp_v4l2_sensor}"
@@ -225,7 +227,7 @@ function is_camera_mipi()
         search="sensor\[${FRONT_CAMERA_V4L2_ID#nxp_v4l2_sensor}"
     fi
 
-    local tmp=$(awk '/'"${search}"'/{getline; getline; getline; print $0}' ${TOP}/kernel/arch/arm/plat-s5p4418/${BOARD}/device.c |\
+    local tmp=$(awk '/'"${search}"'/{getline; getline; getline; print $0}' ${TOP}/kernel/arch/arm/plat-${PLAT}/${BOARD}/device.c |\
          grep is_mipi | awk '{print $3}' | tr -d ',')
     if [ "${tmp}" ]; then
         echo "${tmp}"
@@ -313,7 +315,7 @@ function check_camera_orientation()
 
 function make_board_camera_cpp()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}/camera/board-camera.cpp
+    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/camera/board-camera.cpp
 
     if [ -f ${src_file} ]; then
         rm -f ${src_file}

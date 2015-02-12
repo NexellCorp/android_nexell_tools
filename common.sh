@@ -2,6 +2,9 @@
 
 set -e
 
+#P_NAME=s5p6818
+#PLAT_NAME=plat-s5p6818
+
 function check_result()
 {
     job=$1
@@ -206,7 +209,7 @@ function update_nand_config_file()
     echo "total ${total_size}" >> ${config_file}
 }
 
-# get partition offset for nand from kernel source(arch/arm/plat-s5p4418/board_name/device.c)
+# get partition offset for nand from kernel source(arch/arm/${PLAT_NAME}/board_name/device.c)
 # arg1 : board_name
 # arg2 : partition_name
 function get_offset_size_for_nand()
@@ -214,7 +217,7 @@ function get_offset_size_for_nand()
     local board_name=${1}
     local partition_name=${2}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${board_name}/device.c
+    local src_file=${TOP}/kernel/arch/arm/${PLAT_NAME}/${board_name}/device.c
     local offset=$(awk '/"'"${partition_name}"'",$/{ getline; print $3}' ${src_file})
 
     if [ $(is_valid_number ${size_mb}) ]; then
@@ -224,7 +227,7 @@ function get_offset_size_for_nand()
     fi
 }
 
-# get partition size for nand from kernel source(arch/arm/plat-s5p4418/board_name/device.c)
+# get partition size for nand from kernel source(arch/arm/${PLAT_NAME}/board_name/device.c)
 # arg1 : board_name
 # arg2 : partition_name
 # arg3 : nand total size in mega bytes
@@ -234,7 +237,7 @@ function get_partition_size_for_nand()
     local partition_name=${2}
     local total_size_in_mb=${3}
 
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${board_name}/device.c
+    local src_file=${TOP}/kernel/arch/arm/${PLAT_NAME}/${board_name}/device.c
     local size_mb=$(awk '/"'"${partition_name}"'",$/{ getline; getline; print $3}' ${src_file})
 
     if [ $(is_valid_number ${size_mb}) ]; then
@@ -384,7 +387,7 @@ function make_ubi_image_for_nand()
 
     local ubi_cfg_file=$(create_tmp_ubi_cfg ${partition_name} ${partition_size})
 
-    sudo ${TOP}/linux/platform/s5p4418/tools/bin/mk_ubifs.sh \
+    sudo ${TOP}/linux/platform/${P_NAME}/tools/bin/mk_ubifs.sh \
         -p ${page_size} \
         -s ${page_size} \
         -b ${block_size} \
@@ -392,7 +395,7 @@ function make_ubi_image_for_nand()
         -r ${RESULT_DIR}/${partition_name} \
         -i ${ubi_cfg_file} \
         -c ${RESULT_DIR} \
-        -t ${TOP}/linux/platform/s5p4418/tools/bin/mtd-utils \
+        -t ${TOP}/linux/platform/${P_NAME}/tools/bin/mtd-utils \
 		-f ${total_size} \
         -v ${partition_name} \
         -n ${partition_name}.img
@@ -430,7 +433,7 @@ function get_camera_number()
         echo -n
     fi
 
-    local src_file=${TOP}/kernel/arch/arm/plat-s5p4418/${board}/device.c
+    local src_file=${TOP}/kernel/arch/arm/${PLAT_NAME}/${board}/device.c
     grep back_camera ${src_file} &> /dev/null
     [ $? -eq 0 ] && let camera_number++
     grep front_camera ${src_file} &> /dev/null
@@ -438,10 +441,17 @@ function get_camera_number()
     echo -n ${camera_number}
 }
 
+function get_kernel_source_board_list()
+{
+    local src_dir=${TOP}/device/nexell/
+    local boards=$(find $src_dir -maxdepth 1 -type d | awk -F'/' '{print $NF}' | sed -e '/tools*/d')
+    echo $boards
+}
+
 function get_kernel_board_list()
 {
-    local src_dir=${TOP}/kernel/arch/arm/plat-s5p4418
-    local boards=$(find $src_dir -maxdepth 1 -type d | awk -F'/' '{print $NF}' | sed -e '/plat-s5p4418/d' -e '/common/d')
+    local src_dir=${TOP}/kernel/arch/arm/${PLAT_NAME}
+    local boards=$(find $src_dir -maxdepth 1 -type d | awk -F'/' '{print $NF}' | sed -e '/'${PLAT_NAME}'/d' -e '/common/d')
     echo $boards
 }
 
