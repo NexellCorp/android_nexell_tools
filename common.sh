@@ -176,9 +176,16 @@ function make_ext4()
 
     vmsg "partition name: ${partition_name}, partition name upper: ${partition_name_upper}, partition_size: ${partition_size}"
 
-    local host_out_dir="${TOP}/out/host/linux-x86"
-    PATH=${host_out_dir}/bin:$PATH \
-        && mkuserimg.sh -s ${RESULT_DIR}/${partition_name} ${RESULT_DIR}/${partition_name}.img ext4 ${partition_name} ${partition_size}
+    local android_version=$(get_android_version_major)
+    if [ ${android_version} == "5" ] && [ ${partition_name} == "system" ]; then
+        local host_out_dir="${TOP}/out/host/linux-x86"
+        PATH=${host_out_dir}/bin:$PATH \
+            && mkuserimg.sh -s ${RESULT_DIR}/${partition_name} ${RESULT_DIR}/${partition_name}.img ext4 ${partition_name} ${partition_size} ${RESULT_DIR}/root/file_contexts
+    else
+        local host_out_dir="${TOP}/out/host/linux-x86"
+        PATH=${host_out_dir}/bin:$PATH \
+            && mkuserimg.sh -s ${RESULT_DIR}/${partition_name} ${RESULT_DIR}/${partition_name}.img ext4 ${partition_name} ${partition_size}
+    fi
 }
 
 # arg1 : board_name
