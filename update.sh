@@ -532,7 +532,7 @@ function update_bmp()
 {
     if [ ${UPDATE_BMP} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_BMP} == "true" ]; then
-            copy_bmp_files_to_boot
+            copy_bmp_files_to_boot ${BOARD_NAME}
 
 			make_ext4 ${BOARD_NAME} boot
         fi
