@@ -17,7 +17,8 @@ ROOT_DEVICE_TYPE=sd
 WIFI_DEVICE_NAME=rtl8188
 #BUILD_TAG=user
 BUILD_TAG=userdebug
-WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
+#WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188EUS_linux_v4.3.0.3_10997.20140327"
+WIFI_DRIVER_PATH="hardware/realtek/wlan/driver/rtl8188eus"
 VERBOSE=false
 ## OTA variables
 OTA_INCREMENTAL=false
@@ -259,18 +260,18 @@ function build_uboot()
         cd ${TOP}/u-boot
         make distclean
 
-        echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
-        case ${ROOT_DEVICE_TYPE} in
-            sd) apply_uboot_sd_root ;;
-            nand) apply_uboot_nand_root ;;
-        esac
+        #echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
+        #case ${ROOT_DEVICE_TYPE} in
+            #sd) apply_uboot_sd_root ;;
+            #nand) apply_uboot_nand_root ;;
+        #esac
 
         make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
         make -j8
         check_result "build-uboot"
-        if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
-            mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
-        fi
+        #if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
+            #mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        #fi
         cd ${TOP}
 
         echo "---------- End of build u-boot"
@@ -347,23 +348,23 @@ function build_module()
         local out_dir=${TOP}/out/target/product/${BOARD}
         mkdir -p ${out_dir}/system/lib/modules
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo -n -e "build vr driver..."
-        fi
-        cd ${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
-        ./build.sh
-        if [ ${VERBOSE} == "true" ]; then
-            echo "End"
-        fi
+        #if [ ${VERBOSE} == "true" ]; then
+            #echo -n -e "build vr driver..."
+        #fi
+        #cd ${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
+        #./build.sh
+        #if [ ${VERBOSE} == "true" ]; then
+            #echo "End"
+        #fi
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo -n -e "build coda driver..."
-        fi
-        cd ${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
-        ./build.sh
-        if [ ${VERBOSE} == "true" ]; then
-            echo "End"
-        fi
+        #if [ ${VERBOSE} == "true" ]; then
+            #echo -n -e "build coda driver..."
+        #fi
+        #cd ${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
+        #./build.sh
+        #if [ ${VERBOSE} == "true" ]; then
+            #echo "End"
+        #fi
 
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build wifi driver..."
@@ -657,6 +658,7 @@ function make_boot()
     mkdir -p ${RESULT_DIR}/boot
 
     cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+    cp ${TOP}/kernel/arch/arm/boot/Image ${RESULT_DIR}/boot
 
     copy_bmp_files_to_boot ${BOARD_NAME}
 
