@@ -367,6 +367,15 @@ function build_module()
         fi
 
         if [ ${VERBOSE} == "true" ]; then
+            echo -n -e "build zeroboot driver..."
+        fi
+        cd ${TOP}/linux/platform/${CHIP_NAME}/modules/zeroboot
+        ./build.sh
+        if [ ${VERBOSE} == "true" ]; then
+            echo "End"
+        fi
+
+        if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build wifi driver..."
         fi
         cd ${TOP}/${WIFI_DRIVER_PATH}

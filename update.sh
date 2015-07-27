@@ -251,7 +251,7 @@ function create_partmap_for_spirom()
         echo "flash=nand,0:cache:ext4:0x33300000,0x1AC00000;" >> ${partmap_file}
         echo "flash=nand,0:misc:emmc:0x4E000000,0x00800000;" >> ${partmap_file}
         echo "flash=nand,0:recovery:emmc:0x4E900000,0x01600000;" >> ${partmap_file}
-        echo "flash=nand,0:userdata:ext4:0x50000000,0x0;" >> ${partmap_file}
+        echo "flash=nand,0:userdata:ext4:0x70000000,0x0;" >> ${partmap_file}
     else
         local dev_num=${ROOT_DEVICE_TYPE#sd}
 		echo "flash=eeprom,0:bootloader:boot:0x10000,0x70000;" >> ${partmap_file}
@@ -260,7 +260,7 @@ function create_partmap_for_spirom()
         echo "flash=mmc,${dev_num}:cache:ext4:0x2CF00000,0x21000000;" >> ${partmap_file}
         echo "flash=mmc,${dev_num}:misc:emmc:0x4E000000,0x00800000;" >> ${partmap_file}
         echo "flash=mmc,${dev_num}:recovery:emmc:0x4E900000,0x01600000;" >> ${partmap_file}
-        echo "flash=mmc,${dev_num}:userdata:ext4:0x50000000,0x0;" >> ${partmap_file}
+        echo "flash=mmc,${dev_num}:userdata:ext4:0x70000000,0x0;" >> ${partmap_file}
     fi
 }
 
@@ -571,7 +571,7 @@ function recalc_userdata_size()
     local misc_size=0x800000
     local recovery_size=0x1600000
     local extpartinfo_size=0x300000
-    local user_data_size=$((ROOT_DEVICE_SIZE - boot_size - system_size - cache_size - misc_size - recovery_size - extpartinfo_size - (1024*1024)))
+    local user_data_size=$((ROOT_DEVICE_SIZE - boot_size - system_size - cache_size - misc_size - recovery_size - extpartinfo_size - (1024*1024) - (1024*1024*768)))
     echo -n "${user_data_size}"
 }
 

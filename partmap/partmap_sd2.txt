@@ -10,4 +10,4 @@ flash=mmc,2:system:ext4:0x004100000,0x02F200000;
 flash=mmc,2:cache:ext4:0x33300000,0x1AC00000;
 flash=mmc,2:misc:emmc:0x4E000000,0x00800000;
 flash=mmc,2:recovery:emmc:0x4E900000,0x01600000;
-flash=mmc,2:userdata:ext4:0x50000000,0x0;
+flash=mmc,2:userdata:ext4:0x80000000,0x0;
