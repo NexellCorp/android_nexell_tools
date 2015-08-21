@@ -14,31 +14,54 @@ function check_result()
     fi
 }
 
+function is_64bit()
+{
+    local board_name=${1}
+    local src_file=${TOP}/device/nexell/${board_name}/BoardConfig.mk
+    local result=$(grep TARGET_ARCH ${src_file} | grep arm64)
+    if [ "${result}x" == "x" ]; then
+        echo -n 0
+    else
+        echo -n 1
+    fi
+}
+
 function set_android_toolchain_and_check()
 {
-    local toolchain_version=
-    if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
-        toolchain_version=4.6
-    elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
-        toolchain_version=4.8
+    if [ "${IS_64BIT}" == "1" ]; then
+        echo "PATH setting for android aarch64 toolchain"
+        export PATH=${TOP}/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin:$PATH
+        aarch64-linux-android-gcc -v
+        if [ $? -ne 0 ]; then
+            echo "Error: can't check aarch64-linux-android-gcc"
+            echo "Check android source"
+            exit 1
+        fi
     else
-        echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
-        exit 1
-    fi
+        local toolchain_version=
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            toolchain_version=4.6
+        elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+            toolchain_version=4.8
+        else
+            echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+            exit 1
+        fi
 
-    if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin ]; then
-        echo "Error: can't find android toolchain!!!"
-        echo "Check android source"
-        exit 1
-    fi
+        if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin ]; then
+            echo "Error: can't find android toolchain!!!"
+            echo "Check android source"
+            exit 1
+        fi
 
-    echo "PATH setting for android toolchain"
-    export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin/:$PATH
-    arm-eabi-gcc -v
-    if [ $? -ne 0 ]; then
-        echo "Error: can't check arm-eabi-gcc"
-        echo "Check android source"
-        exit 1
+        echo "PATH setting for android toolchain"
+        export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin/:$PATH
+        arm-eabi-gcc -v
+        if [ $? -ne 0 ]; then
+            echo "Error: can't check arm-eabi-gcc"
+            echo "Check android source"
+            exit 1
+        fi
     fi
 }
 
@@ -186,6 +209,28 @@ function make_ext4()
         PATH=${host_out_dir}/bin:$PATH \
             && mkuserimg.sh -s ${RESULT_DIR}/${partition_name} ${RESULT_DIR}/${partition_name}.img ext4 ${partition_name} ${partition_size}
     fi
+}
+
+make_vfat()
+{
+    cd ${RESULT_DIR}
+    local root_dir=boot
+    local size=64
+    local img=${root_dir}.img
+
+    dd if=/dev/zero of=${img} bs=1M count=${size}
+    sudo losetup -f ${img}
+    sudo mkfs.vfat /dev/loop0
+    sleep 1
+    mkdir -p mnt
+    sudo mount -t vfat -o loop /dev/loop0 mnt
+    sudo cp ${root_dir}/* mnt/
+    sleep 1
+    sudo umount mnt
+    sleep 1
+    sudo losetup -d /dev/loop0
+    rm -rf mnt
+    cd ${TOP}
 }
 
 # arg1 : board_name

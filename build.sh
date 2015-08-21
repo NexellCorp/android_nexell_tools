@@ -30,6 +30,9 @@ CHIP_NAME=
 BOARD_NAME=
 BOARD_PURE_NAME=
 
+KERNEL_64BIT="kernel-3.10.49"
+KERNEL_32BIT="kernel-3.4.39"
+
 ANDROID_VERSION_MAJOR=
 
 function check_top()
@@ -261,17 +264,21 @@ function build_uboot()
         make distclean
 
         echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
-        case ${ROOT_DEVICE_TYPE} in
-            sd) apply_uboot_sd_root ;;
-            nand) apply_uboot_nand_root ;;
-        esac
+        #case ${ROOT_DEVICE_TYPE} in
+            #sd) apply_uboot_sd_root ;;
+            #nand) apply_uboot_nand_root ;;
+        #esac
 
-        make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
+        if [ "${IS_64BIT}" == "1" ]; then
+            make ${CHIP_NAME}_arm64_${BOARD_PURE_NAME}_config
+        else
+            make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
+        fi
         make -j8
         check_result "build-uboot"
-        if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
-            mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
-        fi
+        #if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
+            #mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        #fi
         cd ${TOP}
 
         echo "---------- End of build u-boot"
@@ -300,9 +307,11 @@ function build_kernel()
         echo "build kernel"
         echo "=============================================="
 
-        if [ ! -e ${TOP}/kernel ]; then
-            cd ${TOP}
-            ln -s linux/kernel/kernel-3.4.39 kernel
+        rm -f ${TOP}/kernel
+        if [ "${IS_64BIT}" == "1" ]; then
+            ln -s linux/kernel/${KERNEL_64BIT} kernel
+        else
+            ln -s linux/kernel/${KERNEL_32BIT} kernel
         fi
 
         cd ${TOP}/kernel
@@ -317,19 +326,26 @@ function build_kernel()
             exit 1
         fi
 
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            kernel_config=$(apply_kernel_nand_config)
-            echo "nand kernel config: ${kernel_config}"
-        fi
+        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            #kernel_config=$(apply_kernel_nand_config)
+            #echo "nand kernel config: ${kernel_config}"
+        #fi
 
         make distclean
-        cp arch/arm/configs/${kernel_config} .config
-        yes "" | make ARCH=arm oldconfig
-        make ARCH=arm uImage -j8
-
-        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
-            rm -f ${TOP}/arch/arm/configs/${kernel_config}
+        if [ "${IS_64BIT}" == "1" ]; then
+            cp arch/arm64/configs/${kernel_config} .config
+            yes "" | make ARCH=arm64 oldconfig
+            make ARCH=arm64 Image -j8
+            make ARCH=arm64 nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb
+        else
+            cp arch/arm/configs/${kernel_config} .config
+            yes "" | make ARCH=arm oldconfig
+            make ARCH=arm uImage -j8
         fi
+
+        #if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            #rm -f ${TOP}/arch/arm/configs/${kernel_config}
+        #fi
 
         check_result "build-kernel"
 
@@ -348,10 +364,17 @@ function build_module()
         local out_dir=${TOP}/out/target/product/${BOARD}
         mkdir -p ${out_dir}/system/lib/modules
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo -n -e "build vr driver..."
+        local ogl_driver=
+        if [ "${IS_64BIT}" == "1" ]; then
+            ogl_driver=${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/mali
+        else
+            ogl_driver=${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
         fi
-        cd ${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
+
+        if [ ${VERBOSE} == "true" ]; then
+            echo -n -e "build ogl driver..."
+        fi
+        cd ${ogl_driver}
         ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
@@ -360,20 +383,33 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build coda driver..."
         fi
-        cd ${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
+        local coda_driver=
+        if [ "${IS_64BIT}" == "1" ]; then
+            coda_driver=${TOP}/linux/platform/${CHIP_NAME}/modules/coda960_64
+        else
+            coda_driver=${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
+        fi
+        cd ${coda_driver}
         ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
         fi
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo -n -e "build wifi driver..."
+        if [ "${IS_64BIT}" == "0" ]; then
+            if [ ${VERBOSE} == "true" ]; then
+                echo -n -e "build wifi driver..."
+            fi
+            cd ${TOP}/${WIFI_DRIVER_PATH}
+            if [ "${IS_64BIT}" == "1" ]; then
+                ./build.sh arm64
+            else
+                ./build.sh
+            fi
+            if [ ${VERBOSE} == "true" ]; then
+                echo "End"
+            fi
         fi
-        cd ${TOP}/${WIFI_DRIVER_PATH}
-        ./build.sh
-        if [ ${VERBOSE} == "true" ]; then
-            echo "End"
-        fi
+
         cd ${TOP}
 
         if [ ${VERBOSE} == "true" ]; then
@@ -513,7 +549,7 @@ function apply_kernel_ion_header()
 
 function build_cts()
 {
-    make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} cts
+    make -j16 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} cts
 }
 
 function sign_system_private_app()
@@ -543,13 +579,13 @@ function build_android()
         echo "=============================================="
 
         #patch_android
-        generate_key
+        #generate_key
 
         if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
             apply_kernel_ion_header
         fi
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
+        make -j16 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
         check_result "build-android"
 
         make_android_root
@@ -575,7 +611,7 @@ function build_dist()
 
         #patch_android
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
+        make -j16 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
 
         cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.$(whoami).zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
 
@@ -657,7 +693,19 @@ function make_boot()
 
     mkdir -p ${RESULT_DIR}/boot
 
-    cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+    # for sdfs
+    cp ${TOP}/linux/platform/s5p6818/boot/release/2ndboot/NXDATA64.SBH ${RESULT_DIR}/boot/NXDATA.SBH
+    cp ${TOP}/linux/platform/s5p6818/boot/release/2ndboot/S5P6818_2ndboot_aarch64_V035_SDFS_SVT.bin ${RESULT_DIR}/boot/NXDATA.SBL
+    cp ${TOP}/linux/platform/s5p6818/boot/release/2ndboot/NXDATA.TBH ${RESULT_DIR}/boot/NXDATA.TBH
+    cp ${RESULT_DIR}/u-boot.bin ${RESULT_DIR}/boot/NXDATA.TBL
+    cp ${TOP}/linux/platform/s5p6818/boot/release/2ndboot/NXBTINFO.SBH ${RESULT_DIR}/boot/NXBTINFO.SBH
+
+    if [ "${IS_64BIT}" == "1" ]; then
+        cp ${TOP}/kernel/arch/arm64/boot/Image ${RESULT_DIR}/boot
+        cp ${TOP}/kernel/arch/arm64/boot/dts/nexell/s5p6818-svt.dtb ${RESULT_DIR}/boot
+    else
+        cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+    fi
 
     copy_bmp_files_to_boot ${BOARD_NAME}
 
@@ -670,7 +718,9 @@ function make_boot()
         cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
     fi
 
-	make_ext4 ${BOARD_NAME} boot
+    # psw0523 test for svt sdfs
+	#make_ext4 ${BOARD_NAME} boot
+	make_vfat
     vmsg "end make_boot"
 }
 
@@ -745,6 +795,8 @@ parse_args $@
 print_args
 export VERBOSE
 export ANDROID_VERSION_MAJOR=$(get_android_version_major)
+export IS_64BIT=$(is_64bit ${BOARD_NAME})
+echo "is_64bit ==> ${IS_64BIT}"
 set_android_toolchain_and_check
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 BOARD_PURE_NAME=${BOARD_NAME%_*}

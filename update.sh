@@ -3,7 +3,8 @@
 set -e
 
 TOP=$(pwd)
-FASTBOOT=${TOP}/device/nexell/tools/fastboot
+#FASTBOOT=${TOP}/device/nexell/tools/fastboot
+FASTBOOT=fastboot
 RESULT_DIR=${TOP}/result
 export TOP RESULT_DIR
 
@@ -115,6 +116,7 @@ function check_boot_device_type()
         sd0) ;;
         sd2) ;;
         nand) ;;
+        sdfs) ;;
         * ) echo "Error: invalid boot device type: ${BOOT_DEVICE_TYPE}"; exit 1 ;;
     esac
 
@@ -174,7 +176,8 @@ function get_root_device()
             ROOT_DEVICE_TYPE=nand
         else
             echo "Error: can't get ROOT_DEVICE_TYPE... Check ${fstab} file"
-            exit 1
+            ROOT_DEVICE_TYPE="sd0"
+            #exit 1
         fi
     fi
 
@@ -588,9 +591,11 @@ function update_userdata()
 #check_top
 source device/nexell/tools/common.sh
 
+echo 1
 parse_args $@
 #export VERBOSE
 
+echo 2
 #check_fastboot
 #check_target_device
 check_boot_device_type
@@ -599,19 +604,27 @@ CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 get_root_device
 get_root_device_size
 
+echo 3
 update_partitionmap
-if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-#nand: release)
-export ANDROID_VERSION_MAJOR=$(get_android_version_major)
-set_android_toolchain_and_check
 
-update_2ndboot
-update_bootloader
+echo 4
+if [ "${BOOT_DEVICE_TYPE}" == "sdfs" ]; then
+    echo "this is sdfs type!!!"
 else
-update_2ndboot
-update_bootloader
+    if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+        #nand: release)
+        export ANDROID_VERSION_MAJOR=$(get_android_version_major)
+        set_android_toolchain_and_check
+
+        update_2ndboot
+        update_bootloader
+    else
+        update_2ndboot
+        update_bootloader
+    fi
 fi
-change_fstab_for_sd
+
+#change_fstab_for_sd
 
 if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
 	update_kernel
