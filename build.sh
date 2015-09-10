@@ -747,7 +747,8 @@ export VERBOSE
 export ANDROID_VERSION_MAJOR=$(get_android_version_major)
 set_android_toolchain_and_check
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
-BOARD_PURE_NAME=${BOARD_NAME%_*}
+#BOARD_PURE_NAME=${BOARD_NAME%_*}
+BOARD_PURE_NAME=${BOARD_NAME#*_}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
 clean_up
