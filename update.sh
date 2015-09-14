@@ -497,7 +497,8 @@ function update_kernel()
 {
     if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_KERNEL} == "true" ]; then
-            cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+            # cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+            cp ${TOP}/kernel/arch/arm64/boot/Image ${RESULT_DIR}/boot
             make_ext4 ${BOARD_NAME} boot
         fi
 
