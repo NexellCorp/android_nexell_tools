@@ -130,7 +130,7 @@ function query_root_device_size()
 
 function query_main_sd_device_number()
 {
-    local avail_numbers="0 1"
+    local avail_numbers="0 1 2"
     printf "===> %-30.30s\n" "select main sd card(emmc) port number"
     select number in ${avail_numbers}; do
         if [ -n ${number} ]; then
@@ -232,9 +232,13 @@ function query_external_sd_device_number()
     if [ ${ROOT_DEVICE_TYPE} == "sd" ]; then
         if [ ${MAIN_SD_DEVICE_NUMBER} == "0" ]; then
             avail_numbers="1 2"
-        else
+		fi
+        if [ ${MAIN_SD_DEVICE_NUMBER} == "1" ]; then
             avail_numbers="0 2"
-        fi
+		fi
+        if [ ${MAIN_SD_DEVICE_NUMBER} == "2" ]; then
+            avail_numbers="0 1"
+		fi
     else
         avail_numbers="0 1 2"
     fi
@@ -255,7 +259,7 @@ function base_porting()
     printf "%b\n"  " Base Porting"
     printf "%b\n"  "------------------------"
     local s_option="-s ${S_BOARD}"
-    local b_option="-b ${T_BOARD}_${P_NAME}"
+    local b_option="-b ${P_NAME}_${T_BOARD}"
     local r_option="-r ${ROOT_DEVICE_TYPE}"
     local z_option="-z ${ROOT_DEVICE_SIZE_IN_GB}"
     local m_option=""

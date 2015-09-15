@@ -138,7 +138,7 @@ function make_android_nxp_v4l2_cpp()
     local use_resol=false
     local use_hdmi=false
 
-    local dst_file=${TOP}/device/nexell/${board}_${plat}/v4l2/android-nxp-v4l2.cpp
+    local dst_file=${TOP}/device/nexell/${plat}_${board}/v4l2/android-nxp-v4l2.cpp
     rm -f ${dst_file}
 
     if (( ${CAMERA_NUM} > 0 )); then
@@ -208,7 +208,7 @@ parse_args "$@"
 export VERBOSE
 
 query_board
-vmsg "BOARD: ${BOARD}_${PLAT}"
+vmsg "BOARD: ${PLAT}_${BOARD}"
 
 CAMERA_NUM=$(get_camera_number ${BOARD})
 vmsg "CAMERA_NUM: ${CAMERA_NUM}"

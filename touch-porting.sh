@@ -69,7 +69,7 @@ function remove_idc_file()
         board=${1}
     fi
 
-    local idc_file=$(ls ${TOP}/device/nexell/${board}_${plat}/*.idc)
+    local idc_file=$(ls ${TOP}/device/nexell/${plat}_${board}/*.idc)
     if [ ${idc_file} ] && [ -f ${idc_file} ]; then
         rm -f ${idc_file}
     fi
@@ -86,7 +86,7 @@ function remove_touch_in_devicemk()
         board=${1}
     fi
 
-    local devicemk=${TOP}/device/nexell/${board}_${plat}/device.mk
+    local devicemk=${TOP}/device/nexell/${plat}_${board}/device.mk
     tac ${devicemk} | sed -e '/.idc/,+1d' | tac > /tmp/device.mk
     mv /tmp/device.mk ${devicemk}
 
@@ -107,7 +107,7 @@ function create_idc_file()
         touch_device=${2}
     fi
 
-    local dest_file=${TOP}/device/nexell/${board}_${plat}/${touch_device}.idc
+    local dest_file=${TOP}/device/nexell/${plat}_${board}/${touch_device}.idc
     echo 'touch.deviceType = touchScreen' > ${dest_file}
     echo 'touch.orientationAware = 1' >> ${dest_file}
 
@@ -128,7 +128,7 @@ function apply_idc_to_devicemk()
         touch_device=${2}
     fi
 
-    local devicemk=${TOP}/device/nexell/${board}_${plat}/device.mk
+    local devicemk=${TOP}/device/nexell/${plat}_${board}/device.mk
     awk '/# touch/{print; getline; print; getline; print "PRODUCT_COPY_FILES += \\\n    device/nexell/'"${board}"'_'"${plat}"'/'"${touch_device}"'.idc:system/usr/idc/'"${touch_device}"'.idc"}1' ${devicemk} > /tmp/device.mk
     mv /tmp/device.mk ${devicemk}
 

@@ -79,7 +79,7 @@ function check_sensor_type()
 
 function apply_sensor_type()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
+    local src_file=${TOP}/device/nexell/${PLAT}_${BOARD}/BoardConfig.mk
 
     if [ ${SENSOR_TYPE} == "ANOTHER" ]; then
         echo "======================================================="
