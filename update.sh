@@ -453,8 +453,8 @@ function update_bootloader()
         if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
             local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
-			local load_addr="0x42c00000"
-			local launch_addr="0x42c00000"
+			local load_addr="0x40C00000"
+			local launch_addr="0x40C00000"
 			#change this
 			local bootrecovery_file="u-boot.ecc"
 

@@ -151,14 +151,24 @@ function apply_uboot_nand_config()
     # backup: include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org
     cp ${dest_file} ${dest_file}.org
 
+	local config_text_base="#define	CONFIG_SYS_TEXT_BASE			0x40C00000"
+	sed -i "s/.*#define[[:space:]]CONFIG_SYS_TEXT_BASE.*/${config_text_base}/g" ${dest_file}
+
+	local config_malloc_start="#define	CONFIG_MEM_MALLOC_START			0x41000000"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_START.*/${config_malloc_start}/g" ${dest_file}
+
+	local config_malloc_length="#define CONFIG_MEM_MALLOC_LENGTH		64*1024*1024							/* more than 2M for ubifs: MAX 16M */"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_LENGTH.*/${config_malloc_length}/g" ${dest_file}
+
+
     local config_logo_load="    #define CONFIG_CMD_LOGO_LOAD    \"ext4load nand 0:1 0x47000000 logo.bmp; drawbmp 0x47000000\""
-    sed -i "s/.*#define.*CONFIG_CMD_LOGO_LOAD.*/${config_logo_load}/g" ${dest_file}
+    sed -i "s/.*#define[[:space:]]CONFIG_CMD_LOGO_LOAD.*/${config_logo_load}/g" ${dest_file}
 
     local config_bootcommand="#define CONFIG_BOOTCOMMAND \"ext4load nand 0:1 0x48000000 uImage;ext4load nand 0:1 0x49000000 root.img.gz;bootm 0x48000000\""
-    sed -i "s/#define.*CONFIG_BOOTCOMMAND.*/${config_bootcommand}/g" ${dest_file}
+    sed -i "s/#define[[:space:]]CONFIG_BOOTCOMMAND.*/${config_bootcommand}/g" ${dest_file}
 
     local config_cmd_nand="#define CONFIG_CMD_NAND"
-    sed -i "s/\/\/#define.*CONFIG_CMD_NAND/${config_cmd_nand}/g" ${dest_file}
+    sed -i "s/\/\/#define[[:space:]]CONFIG_CMD_NAND/${config_cmd_nand}/g" ${dest_file}
 
     if [ ${VERBOSE} == "true" ]; then
         echo "End"
@@ -210,6 +220,34 @@ function disable_uboot_sd_root()
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
 
+function enable_uboot_nand_memory_layout()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+
+	local config_text_base="#define	CONFIG_SYS_TEXT_BASE			0x40C00000"
+	sed -i "s/.*#define[[:space:]]CONFIG_SYS_TEXT_BASE.*/${config_text_base}/g" ${src_file}
+
+	local config_malloc_start="#define	CONFIG_MEM_MALLOC_START			0x41000000"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_START.*/${config_malloc_start}/g" ${src_file}
+
+	local config_malloc_length="#define CONFIG_MEM_MALLOC_LENGTH		64*1024*1024"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_LENGTH.*/${config_malloc_length}/g" ${src_file}
+}
+
+function disable_uboot_nand_memory_layout()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+
+	local config_text_base="#define	CONFIG_SYS_TEXT_BASE			0x42C00000"
+	sed -i "s/.*#define[[:space:]]CONFIG_SYS_TEXT_BASE.*/${config_text_base}/g" ${src_file}
+
+	local config_malloc_start="#define	CONFIG_MEM_MALLOC_START			0x43000000"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_START.*/${config_malloc_start}/g" ${src_file}
+
+	local config_malloc_length="#define CONFIG_MEM_MALLOC_LENGTH		32*1024*1024"
+	sed -i "s/.*#define[[:space:]]CONFIG_MEM_MALLOC_LENGTH.*/${config_malloc_length}/g" ${src_file}
+}
+
 function enable_uboot_nand_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
@@ -234,6 +272,7 @@ function apply_uboot_sd_root()
 {
     echo "====> apply sd root"
     disable_uboot_nand_root
+	disable_uboot_nand_memory_layout
     enable_uboot_sd_root
 }
 
@@ -242,6 +281,7 @@ function apply_uboot_nand_root()
     echo "====> apply nand root"
     disable_uboot_sd_root
     enable_uboot_nand_root
+	enable_uboot_nand_memory_layout
 }
 
 function build_uboot()
@@ -288,6 +328,10 @@ function apply_kernel_nand_config()
 
 	# FTL
 	sed -i 's/.*CONFIG_NXP_FTL .*/CONFIG_NXP_FTL=y\nCONFIG_NAND_FTL=y/g' ${dst_file}
+
+	# DEFAULT GOVERNER CHANGE
+	sed -i 's/.*CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND.*/# CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND is not set/g' ${dst_file}
+	sed -i 's/.*CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE.*/CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE=y/g' ${dst_file}
     
     echo ${dst_config}
 }
