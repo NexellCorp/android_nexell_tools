@@ -54,10 +54,10 @@ function parse_args()
 
 function check_camera()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
+    local src_file=${TOP}/device/nexell/${PLAT}_${BOARD}/BoardConfig.mk
     local board_has_camera=$(grep 'BOARD_HAS_CAMERA' ${src_file} | cut -d' ' -f3)
     if [ ${board_has_camera} == "false" ]; then
-        echo "You don't have to port camera, your board ${BOARD}_${PLAT} don't have camera!!!"
+        echo "You don't have to port camera, your board ${PLAT}_${BOARD} don't have camera!!!"
         exit 1
     fi
 }
@@ -66,7 +66,7 @@ function query_camera_number()
 {
     echo "===================================="
     until [ ${CAMERA_NUMBER} ]; do
-        local input=$(get_userinput_number "Enter ${BOARD}_${PLAT}'s camera number(1 or 2): ")
+        local input=$(get_userinput_number "Enter ${PLAT}_${BOARD}'s camera number(1 or 2): ")
         if [ ${input} == "invalid" ]; then
             echo "You must enter only Number!!!(1~2)"
         else
@@ -315,7 +315,7 @@ function check_camera_orientation()
 
 function make_board_camera_cpp()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/camera/board-camera.cpp
+    local src_file=${TOP}/device/nexell/${PLAT}_${BOARD}/camera/board-camera.cpp
 
     if [ -f ${src_file} ]; then
         rm -f ${src_file}
@@ -550,7 +550,7 @@ echo "BOARD: ${BOARD}"
 base_kernel_check
 check_camera
 
-CAMERA_NUMBER=$(get_camera_number ${BOARD})
+CAMERA_NUMBER=$(get_camera_number ${BOARD} plat-${PLAT})
 vmsg "CAMERA_NUMBER: ${CAMERA_NUMBER}"
 check_camera_number
 

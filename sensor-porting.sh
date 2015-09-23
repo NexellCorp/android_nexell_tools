@@ -27,7 +27,7 @@ function usage()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:hv" -- "$@"`
+    TEMP=`getopt -o "p:b:hv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -44,13 +44,15 @@ function parse_args()
 
 function is_sensor_exist()
 {
-    local src_file=${TOP}/device/nexell/${BOARD}_${PLAT}/BoardConfig.mk
-    local board_has_sensor=$(awk '/BOARD_HAS_SENSOR/ {print $3}' ${src_file})
+    local src_file=${TOP}/device/nexell/${PLAT}_${BOARD}/BoardConfig.mk
+	local board_has_sensor=$(grep 'BOARD_HAS_CAMERA' ${src_file} | cut -d' ' -f3)
     if [ ${board_has_sensor} == "false" ]; then
         #echo "${BOARD} don't have sensor!!!"
         echo "no"
+		sensor_exist="no"
     else
         echo "yes"
+		sensor_exist="yes"
     fi
 }
 
@@ -110,7 +112,7 @@ export VERBOSE
 query_board
 vmsg "BOARD: ${BOARD}"
 
-sensor_exist=is_sensor_exist
+is_sensor_exist
 if [[ ${sensor_exist} == "yes" ]]; then
     query_sensor_type
     vmsg "SENSOR_TYPE: ${SENSOR_TYPE}"

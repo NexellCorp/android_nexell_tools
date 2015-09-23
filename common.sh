@@ -435,8 +435,13 @@ function get_camera_number()
 {
     local camera_number=0
     local board=${1}
+	local PLAT_NAME=${2}
     if [ -z "${1}" ]; then
         echo "Error: you must give arg1(board_name)"
+        echo -n
+    fi
+    if [ -z "${2}" ]; then
+        echo "Error: you must give arg2(Platform name)"
         echo -n
     fi
 

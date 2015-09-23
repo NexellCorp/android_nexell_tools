@@ -210,7 +210,7 @@ export VERBOSE
 query_board
 vmsg "BOARD: ${PLAT}_${BOARD}"
 
-CAMERA_NUM=$(get_camera_number ${BOARD})
+CAMERA_NUM=$(get_camera_number ${BOARD} plat-${PLAT})
 vmsg "CAMERA_NUM: ${CAMERA_NUM}"
 
 make_android_nxp_v4l2_cpp
