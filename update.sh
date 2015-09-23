@@ -129,7 +129,7 @@ function get_board_name()
         exit 1
     else
         BOARD_NAME=$(cat ${build_prop} | grep ro.build.product= | sed 's/\(ro.build.product\)=\(.*\)/\2/')
-        BOARD_PURE_NAME=${BOARD_NAME%_*}
+		BOARD_PURE_NAME=${BOARD_NAME#*_}
     fi
 
     vmsg "BOARD_NAME: ${BOARD_NAME}"
