@@ -738,7 +738,8 @@ function make_cache()
     vmsg "start make_cache"
     local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
     cp -a ${out_dir}/cache ${RESULT_DIR}
-	cp ${out_dir}/cache.img ${RESULT_DIR}
+	#cp ${out_dir}/cache.img ${RESULT_DIR}
+	make_ext4 ${BOARD_NAME} cache
 
     vmsg "end make_cache"
 }
