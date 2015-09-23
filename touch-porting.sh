@@ -129,7 +129,7 @@ function apply_idc_to_devicemk()
     fi
 
     local devicemk=${TOP}/device/nexell/${plat}_${board}/device.mk
-    awk '/# touch/{print; getline; print; getline; print "PRODUCT_COPY_FILES += \\\n    device/nexell/'"${board}"'_'"${plat}"'/'"${touch_device}"'.idc:system/usr/idc/'"${touch_device}"'.idc"}1' ${devicemk} > /tmp/device.mk
+    awk '/# touch/{print; getline; print; getline; print "PRODUCT_COPY_FILES += \\\n    device/nexell/'"${plat}"'_'"${board}"'/'"${touch_device}"'.idc:system/usr/idc/'"${touch_device}"'.idc"}1' ${devicemk} > /tmp/device.mk
     mv /tmp/device.mk ${devicemk}
 
     vmsg "apply ${touch_device}.idc to ${devicemk}"
