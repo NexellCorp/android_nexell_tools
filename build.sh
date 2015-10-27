@@ -649,14 +649,22 @@ function build_dist()
                 cp device/nexell/${BOARD_NAME}/boot/2ndboot.bin ${tmpdir}/RADIO/2ndbootloader
             fi
             if [ ${OTA_UPDATE_UBOOT} == "true" ]; then
-                cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
+                if [ ${ROOT_DEVICE_TYPE} == "sd" ]; then
+                    local port=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
+                    ${TOP}/linux/platform/common/tools/sd/sd_bootgen/sd_ubootgen -i ${RESULT_DIR}/u-boot.bin -o ${RESULT_DIR}/u-boot.bin_sd -l 42c00000 -p ${port}
+                    cp ${RESULT_DIR}/u-boot.bin_sd ${tmpdir}/RADIO/bootloader
+                else
+                    cp ${RESULT_DIR}/u-boot.bin ${tmpdir}/RADIO/bootloader
+                fi
             fi
         fi
         cd ${tmpdir}
         zip -r -q ../target *
         cd ${TOP}
-        cp build/tools/releasetools/common.py /tmp/
-        cp device/nexell/tools/common.py build/tools/releasetools/
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            cp build/tools/releasetools/common.py /tmp/
+            cp device/nexell/tools/common.py build/tools/releasetools/
+        fi
         local ota_name="ota-${BOARD_NAME}-${release_date}.zip"
         local i_option=
         if [ ${OTA_INCREMENTAL} == "true" ]; then
@@ -674,14 +682,23 @@ function build_dist()
             fi
         fi
         echo "i_option ====> ${i_option}"
-        build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${i_option} ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
-        mv /tmp/common.py build/tools/releasetools/
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k vendor/nexell/security/${BOARD_NAME}/release ${i_option} ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
+            mv /tmp/common.py build/tools/releasetools/
+        else
+            build/tools/releasetools/ota_from_target_files -v -p out/host/linux-x86 -k build/target/product/security/testkey ${i_option} ${RESULT_DIR}/target.zip ${RESULT_DIR}/${ota_name}
+        fi
 
         #restore_patch
 
         local ota_desc=${RESULT_DIR}/OTA_DESC
-        echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 4.4.2 KOT49H ${release_date}" > ${ota_desc}
-        echo "Rom ID: samsung_slsiap_${BOARD_NAME}_kk" >> ${ota_desc}
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 4.4.2 KOT49H ${release_date}" > ${ota_desc}
+            echo "Rom ID: samsung_slsiap_${BOARD_NAME}_kk" >> ${ota_desc}
+        else
+            echo "Rom Name: aosp_${BOARD_NAME}-${BUILD_TAG} 5.1.1 LMY48G ${release_date}" > ${ota_desc}
+            echo "Rom ID: samsung_slsiap_${BOARD_NAME}_lp" >> ${ota_desc}
+        fi
         echo -e ${otaver} | awk '{print "Rom Version: " $1}' >> ${ota_desc}
         echo "Rom Date: ${release_date}" >> ${ota_desc}
         echo "Download URL: http://git.nexell.co.kr/_builds/${ota_name}" >> ${ota_desc}
