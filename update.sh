@@ -346,8 +346,8 @@ function update_2ndboot()
         flash 2ndboot ${secondboot_out_file}
         NSIH_FILE=${nsih_file}
 
-        mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
-        cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
+        # mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
+        # cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
     fi
 }
 
@@ -424,23 +424,23 @@ function update_bootloader()
     if [ ${UPDATE_UBOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
 
         # check bootdevice env save location
-        local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
-        local backup_file=/tmp/${CHIP_NAME}_${BOARD_PURE_NAME}.h
-        cp ${src_file} ${backup_file}
-        case ${BOOT_DEVICE_TYPE} in
-            spirom) apply_uboot_eeprom_config ;;
-            sd0 | sd2) apply_uboot_sd_config ;;
-            nand) apply_uboot_nand_config ;;
-        esac
-        local diff_result="$(diff -urN ${src_file} ${backup_file})"
-        if [[ ${#diff_result} > 0 ]]; then
-            echo ${src_file} is modified!!! rebuild
-            cd ${TOP}/u-boot
-            make -j8
-            cd ${TOP}
-            cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
-        fi
-
+        # local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        # local backup_file=/tmp/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        # cp ${src_file} ${backup_file}
+        # case ${BOOT_DEVICE_TYPE} in
+        #     spirom) apply_uboot_eeprom_config ;;
+        #     sd0 | sd2) apply_uboot_sd_config ;;
+        #     nand) apply_uboot_nand_config ;;
+        # esac
+        # local diff_result="$(diff -urN ${src_file} ${backup_file})"
+        # if [[ ${#diff_result} > 0 ]]; then
+        #     echo ${src_file} is modified!!! rebuild
+        #     cd ${TOP}/u-boot
+        #     make -j8
+        #     cd ${TOP}
+        #     cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
+        # fi
+        #
         if [ ${UPDATE_UBOOT} == "true" ]; then
             cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
         fi
@@ -563,6 +563,38 @@ function update_cache()
     fi
 }
 
+function get_ecid_part()
+{
+    local addr=${1}
+    local result_file=/tmp/ecid.txt 
+    local ecid=
+
+    sudo ${FASTBOOT} getvar ${addr}  2> ${result_file}
+    # cat ${result_file}
+    local failed=$(cat ${result_file} | grep FAILED | awk '{print $2}')
+    if [ -z ${failed} ]; then
+        ecid=$(cat ${result_file} | grep 0x | awk '{print $2}')
+    else
+        echo "error get ecid at ${addr}"
+    fi
+
+    rm -f ${result_file}
+
+    echo -n "${ecid}"
+}
+
+function get_ecid()
+{
+    local ecid0=$(get_ecid_part 0xc0067000)
+    local ecid1=$(get_ecid_part 0xc0067004)
+    local ecid2=$(get_ecid_part 0xc0067008)
+    local ecid3=$(get_ecid_part 0xc006700c)
+
+    local ecid=$(make_ecid ${ecid0} ${ecid1} ${ecid2} ${ecid3})
+    # echo "ECID ---> ${ecid}"
+    echo -n "${ecid}"
+}
+
 function recalc_userdata_size()
 {
     local boot_size=$(get_partition_size ${BOARD_NAME} boot)
@@ -575,10 +607,26 @@ function recalc_userdata_size()
     echo -n "${user_data_size}"
 }
 
+function update_hdcp_key()
+{
+    # psw0523 for HDCP KEY
+    local ecid=$(get_ecid)
+    # local dst_file=ENCRYPTED_HDCP_KEY_TABLE.bin
+    make_hdcp_keyfile ${TOP}/device/nexell/${BOARD_NAME}/hdcp_raw_key.bin ${RESULT_DIR}/ENCRYPTED_HDCP_KEY_TABLE.bin ${ecid}
+    cp ${RESULT_DIR}/ENCRYPTED_HDCP_KEY_TABLE.bin ${RESULT_DIR}/userdata
+    chmod 777 ${RESULT_DIR}/userdata/ENCRYPTED_HDCP_KEY_TABLE.bin
+    # end HDCP KEY
+}
+
 function update_userdata()
 {
     if [ ${UPDATE_USERDATA} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         local user_data_size=$(recalc_userdata_size)
+
+        # for HDCP KEY
+        # update_hdcp_key
+        # end HDCP KEY
+
 		make_ext4 ${BOARD_NAME} userdata ${user_data_size}
 
         flash userdata ${RESULT_DIR}/userdata.img
@@ -598,6 +646,9 @@ get_board_name
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 get_root_device
 get_root_device_size
+
+# update_hdcp_key
+# exit 0
 
 update_partitionmap
 if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then

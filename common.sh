@@ -610,3 +610,48 @@ function get_android_version_major()
      local version_major=$(grep "PLATFORM_VERSION := " ${version_file} | awk '{print $3}' | awk -F. '{print $1}')
      echo ${version_major}
 }
+
+function str_to_4byte_hex()
+{
+    # a="12345" && b="0x${a}" && printf "%08x" $b
+    local src_str=${1}
+    local hex_str="0x${src_str}"
+    local hex_4byte_str=$(printf "%08x" ${hex_str})
+    echo -n ${hex_4byte_str}
+}
+
+function make_ecid()
+{
+    local ecid0=${1}
+    local ecid1=${2}
+    local ecid2=${3}
+    local ecid3=${4}
+
+    local hex_ecid0=$(str_to_4byte_hex ${ecid0})
+    local hex_ecid1=$(str_to_4byte_hex ${ecid1})
+    local hex_ecid2=$(str_to_4byte_hex ${ecid2})
+    local hex_ecid3=$(str_to_4byte_hex ${ecid3})
+
+    local ecid="${hex_ecid3}${hex_ecid2}${hex_ecid1}${hex_ecid0}"
+    echo -n ${ecid}
+}
+
+function make_hdcp_keyfile()
+{
+    local src_file=${1}
+    local dst_file=${2}
+    local ecid=${3}
+
+    local tmpfile1="/tmp/tmpfile1"
+    local tmpfile2="/tmp/tmpfile2"
+
+    dd if=${src_file} of=${tmpfile1} bs=1 count=288
+    dd if=${tmpfile1} of=${tmpfile2} bs=1 count=5
+    dd if=${tmpfile1} of=${tmpfile2} skip=8 seek=5 bs=1 count=280
+    echo -n -e '\x00\x00\x00' >> ${tmpfile2}
+
+    openssl enc -aes-128-ecb -e -in ${tmpfile2} -out ${dst_file}   -K "${ecid}" -salt
+
+    rm -f ${tmpfile1}
+    rm -f ${tmpfile2}
+}
