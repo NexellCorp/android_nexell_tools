@@ -475,7 +475,7 @@ function update_bootloader()
 			fi
 
 			vmsg "bingen u-boot: it takes long time..."
-            #${TOP}/linux/platform/common/tools/bin/nx_bingen -m ${CHIP_NAME} -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
+            ${TOP}/linux/platform/common/tools/bin/nx_bingen -m ${CHIP_NAME} -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootrecovery ${RESULT_DIR}/${bootrecovery_file}
             flash bootloader ${RESULT_DIR}/u-boot.ecc
