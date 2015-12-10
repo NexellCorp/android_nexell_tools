@@ -321,12 +321,31 @@ function build_uboot()
 
 function apply_kernel_nand_config()
 {
-    local src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
-    local dst_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig.nandboot
-    local dst_file=${src_file}.nandboot
+    local src_file=""
+    local dst_config=""
+    local dst_file=""
+	local ver_name=""
+
+    if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+		ver_name=""
+    elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+		ver_name="_lollipop"
+    else
+        echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+        exit 1
+    fi
+
+    src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android${ver_name}_defconfig
+    dst_config="${CHIP_NAME}_${BOARD_PURE_NAME}_android${ver_name}_defconfig.nandboot"
+    dst_file=${src_file}.nandboot
+
     cp ${src_file} ${dst_file}
 
-	# FTL
+
+	# MTD disable
+	sed -i 's/CONFIG_MTD=y/# CONFIG_MTD is not set/g' ${dst_file}
+
+	# FTL endable
 	sed -i 's/.*CONFIG_NXP_FTL .*/CONFIG_NXP_FTL=y\nCONFIG_NAND_FTL=y/g' ${dst_file}
 
 	# DEFAULT GOVERNER CHANGE

@@ -235,14 +235,25 @@ function restart_board()
     sudo ${FASTBOOT} reboot
 }
 
-function create_partmap_for_spirom()
+function create_partmap_for_other()
 {
     local partmap_file=${RESULT_DIR}/partmap.txt
+	local eeprom_2ndboot_len=
     if [ -f ${partmap_file} ]; then
         rm -f ${partmap_file}
     fi
 
-    echo "flash=eeprom,0:2ndboot:2nd:0x0,0x4000;" > ${partmap_file}
+	# s5p4418 - SRAM 16KB
+	# s5p6818 - SRAM 64KB
+	if [ ${CHIP_NAME} == "s5p4418" ]; then
+		eeprom_2ndboot_len=0x4000
+	elif [ ${CHIP_NAME} == "s5p6818" ]; then
+		eeprom_2ndboot_len=0xc000
+	else
+		eeprom_2ndboot_len=0xc000
+	fi
+
+    echo "flash=eeprom,0:2ndboot:2nd:0x0,${eeprom_2ndboot_len};" > ${partmap_file}
     if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
         echo "flash=nand,0:bootrecovery:factory:0x2000000,0x2000000;" >> ${partmap_file}
         echo "flash=nand,0:bootloader:boot:0x4000000,0x2000000;" >> ${partmap_file}
@@ -267,12 +278,12 @@ function create_partmap_for_spirom()
 function update_partitionmap()
 {
     local partmap_file=
-    if [ ${PARTMAP} == "nofile" ]; then
+    if [ ${PARTMAP} == "nofile" ] || [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
         if [ -f ${TOP}/device/nexell/${BOARD_NAME}/partmap.txt ]; then
             partmap_file=${TOP}/device/nexell/${BOARD_NAME}/partmap.txt
         else
-            if [ ${BOOT_DEVICE_TYPE} == "spirom" ]; then
-                create_partmap_for_spirom
+            if [ ${BOOT_DEVICE_TYPE} == "spirom" ] || [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+                create_partmap_for_other
                 partmap_file=${RESULT_DIR}/partmap.txt
             else
                 partmap_file=${TOP}/device/nexell/tools/partmap/partmap_${BOOT_DEVICE_TYPE}.txt
@@ -310,7 +321,7 @@ function update_2ndboot()
                 option_b="SD"
                 ;;
             nand)
-				local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
+				local nand_sizes=$(get_nand_sizes_from_config_file ${CHIP_NAME}_${BOARD_PURE_NAME})
 				local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_nand.bin
@@ -336,7 +347,7 @@ function update_2ndboot()
         #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
         #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -t 2ndboot -b ${option_b} -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
 		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
+			${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
 		else
 			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
 		fi
@@ -451,7 +462,7 @@ function update_bootloader()
         fi
 
         if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-            local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
+            local nand_sizes=$(get_nand_sizes_from_config_file ${CHIP_NAME}_${BOARD_PURE_NAME})
             local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 			local load_addr="0x40C00000"
 			local launch_addr="0x40C00000"
@@ -463,7 +474,8 @@ function update_bootloader()
 				exit 1
 			fi
 
-            ${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
+			vmsg "bingen u-boot: it takes long time..."
+            #${TOP}/linux/platform/common/tools/bin/nx_bingen -m ${CHIP_NAME} -t bootloader -d nand -o ${RESULT_DIR}/u-boot.ecc -i ${RESULT_DIR}/u-boot.bin -n ${NSIH_FILE} -p ${page_size} -l ${load_addr} -e ${launch_addr}
             vmsg "update bootloader: ${RESULT_DIR}/u-boot.ecc"
             flash bootrecovery ${RESULT_DIR}/${bootrecovery_file}
             flash bootloader ${RESULT_DIR}/u-boot.ecc
