@@ -203,6 +203,7 @@ function enable_uboot_sd_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_ENV_IS_IN_MMC/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
     local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
     sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load mmc '"${root_device_num}"':1 0x48000000 uImage;ext4load mmc '"${root_device_num}"':1 0x49000000 root.img.gz;bootm 0x48000000\"/g' ${src_file}
@@ -217,6 +218,7 @@ function disable_uboot_sd_root()
     echo "src_file: ${src_file}"
     #nand:release)
     #sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_ENV_IS_IN_MMC/\/\/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
 
@@ -268,11 +270,29 @@ function disable_uboot_nand_root()
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
 }
 
+function enable_uboot_spi_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+	sed -i 's/\/\/#define[[:space:]]CONFIG_CMD_EEPROM/#define CONFIG_CMD_EEPROM/g' ${src_file}
+	sed -i 's/\/\/#define[[:space:]]CONFIG_SPI/#define CONFIG_SPI/g' ${src_file}
+	sed -i 's/\/\/#define[[:space:]]CONFIG_ENV_IS_IN_EEPROM/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+function disable_uboot_spi_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+	sed -i 's/^#define[[:space:]]CONFIG_CMD_EEPROM/\/\/#define CONFIG_CMD_EEPROM/g' ${src_file}
+	sed -i 's/^#define[[:space:]]CONFIG_SPI/\/\/#define CONFIG_SPI/g' ${src_file}
+	sed -i 's/^#define[[:space:]]CONFIG_ENV_IS_IN_EEPROM/\/\/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+
 function apply_uboot_sd_root()
 {
     echo "====> apply sd root"
     disable_uboot_nand_root
 	disable_uboot_nand_memory_layout
+	disable_uboot_spi_eeprom
     enable_uboot_sd_root
 }
 
@@ -280,6 +300,7 @@ function apply_uboot_nand_root()
 {
     echo "====> apply nand root"
     disable_uboot_sd_root
+	enable_uboot_spi_eeprom
     enable_uboot_nand_root
 	enable_uboot_nand_memory_layout
 }
