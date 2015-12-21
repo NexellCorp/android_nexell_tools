@@ -234,6 +234,7 @@ function enable_uboot_sd_root()
 {
     local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
     sed -i 's/^\/\/#define[[:space:]]CONFIG_CMD_MMC/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^\/\/#define[[:space:]]CONFIG_ENV_IS_IN_MMC/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
     sed -i 's/^\/\/#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
     local root_device_num=$(get_sd_device_number ${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME})
     sed -i 's/^#define[[:space:]]CONFIG_BOOTCOMMAND.*/#define CONFIG_BOOTCOMMAND \"ext4load mmc '"${root_device_num}"':1 0x48000000 uImage;ext4load mmc '"${root_device_num}"':1 0x49000000 root.img.gz;bootm 0x48000000\"/g' ${src_file}
@@ -248,6 +249,7 @@ function disable_uboot_sd_root()
     echo "src_file: ${src_file}"
     #nand:release)
     #sed -i 's/^#define[[:space:]]CONFIG_CMD_MMC/\/\/#define CONFIG_CMD_MMC/g' ${src_file}
+    sed -i 's/^#define[[:space:]]CONFIG_ENV_IS_IN_MMC/\/\/#define CONFIG_ENV_IS_IN_MMC/g' ${src_file}
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_MMC/\/\/#define CONFIG_LOGO_DEVICE_MMC/g' ${src_file}
 }
 
@@ -299,11 +301,29 @@ function disable_uboot_nand_root()
     sed -i 's/^#define[[:space:]]CONFIG_LOGO_DEVICE_NAND/\/\/#define CONFIG_LOGO_DEVICE_NAND/g' ${src_file}
 }
 
+function enable_uboot_spi_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+	sed -i 's/\/\/#define[[:space:]]CONFIG_CMD_EEPROM/#define CONFIG_CMD_EEPROM/g' ${src_file}
+	sed -i 's/\/\/#define[[:space:]]CONFIG_SPI/#define CONFIG_SPI/g' ${src_file}
+	sed -i 's/\/\/#define[[:space:]]CONFIG_ENV_IS_IN_EEPROM/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+function disable_uboot_spi_eeprom()
+{
+    local src_file=${TOP}/u-boot/include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+	sed -i 's/^#define[[:space:]]CONFIG_CMD_EEPROM/\/\/#define CONFIG_CMD_EEPROM/g' ${src_file}
+	sed -i 's/^#define[[:space:]]CONFIG_SPI/\/\/#define CONFIG_SPI/g' ${src_file}
+	sed -i 's/^#define[[:space:]]CONFIG_ENV_IS_IN_EEPROM/\/\/#define CONFIG_ENV_IS_IN_EEPROM/g' ${src_file}
+}
+
+
 function apply_uboot_sd_root()
 {
     echo "====> apply sd root"
     disable_uboot_nand_root
 	disable_uboot_nand_memory_layout
+	disable_uboot_spi_eeprom
     enable_uboot_sd_root
 }
 
@@ -311,6 +331,7 @@ function apply_uboot_nand_root()
 {
     echo "====> apply nand root"
     disable_uboot_sd_root
+	enable_uboot_spi_eeprom
     enable_uboot_nand_root
 	enable_uboot_nand_memory_layout
 }
@@ -360,12 +381,31 @@ function build_uboot()
 
 function apply_kernel_nand_config()
 {
-    local src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig
-    local dst_config=${CHIP_NAME}_${BOARD_PURE_NAME}_android_defconfig.nandboot
-    local dst_file=${src_file}.nandboot
+    local src_file=""
+    local dst_config=""
+    local dst_file=""
+	local ver_name=""
+
+    if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+		ver_name=""
+    elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+		ver_name="_lollipop"
+    else
+        echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+        exit 1
+    fi
+
+    src_file=${TOP}/kernel/arch/arm/configs/${CHIP_NAME}_${BOARD_PURE_NAME}_android${ver_name}_defconfig
+    dst_config="${CHIP_NAME}_${BOARD_PURE_NAME}_android${ver_name}_defconfig.nandboot"
+    dst_file=${src_file}.nandboot
+
     cp ${src_file} ${dst_file}
 
-	# FTL
+
+	# MTD disable
+	sed -i 's/CONFIG_MTD=y/# CONFIG_MTD is not set/g' ${dst_file}
+
+	# FTL endable
 	sed -i 's/.*CONFIG_NXP_FTL .*/CONFIG_NXP_FTL=y\nCONFIG_NAND_FTL=y/g' ${dst_file}
 
 	# DEFAULT GOVERNER CHANGE
