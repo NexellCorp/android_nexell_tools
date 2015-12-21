@@ -32,6 +32,11 @@ BOARD_PURE_NAME=
 
 ANDROID_VERSION_MAJOR=
 
+ARM_ARCH="32"
+KERNEL_VERSION="3.4.39"
+
+ANDROID_PRODUCT=
+
 function check_top()
 {
     if [ ! -d .repo ]; then
@@ -42,11 +47,13 @@ function check_top()
 
 function usage()
 {
-    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -t u-boot -t kernel -t module -t android -t dist [-i previous_target.zip -d 2ndboot -d u-boot ]]"
+    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -a <32 or 64> -k <kernel-version> -t u-boot -t kernel -t module -t android -t dist [-i previous_target.zip -d 2ndboot -d u-boot ]]"
     echo -e '\n -b <board-name> : target board name (available boards: "'"$(get_available_board)"'")'
     echo " -r <root-device-type> : your root device type(sd, nand, usb), default sd"
     echo " -c : clean build, default no"
     echo " -w : wifi device name (rtl8188, rtl8712, bcm), default rtl8188"
+    echo " -a : 32 or 64, default 32"
+    echo " -k : kernel version, default 3.4.39"
     echo " -v : if you want to view verbose log message, specify this, default no"
     echo " -t u-boot  : if you want to build u-boot, specify this, default yes"
     echo " -t kernel  : if you want to build kernel, specify this, default yes"
@@ -61,7 +68,7 @@ function usage()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:r:t:i:d:chv" -- "$@"`
+    TEMP=`getopt -o "b:r:t:i:d:a:k:chv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -70,6 +77,8 @@ function parse_args()
             -r ) ROOT_DEVICE_TYPE=$2; shift 2 ;;
             -c ) CLEAN_BUILD=true; shift 1 ;;
             -w ) WIFI_DEVICE_NAME=$2; shift 2 ;;
+            -a ) ARM_ARCH=$2; shift 2 ;;
+            -k ) KERNEL_VERSION=$2; shift 2 ;;
             -t ) case "$2" in
                     u-boot  ) BUILD_ALL=false; BUILD_UBOOT=true ;;
                     kernel  ) BUILD_ALL=false; BUILD_KERNEL=true ;;
@@ -122,7 +131,29 @@ function print_args()
         fi
         echo -e "ROOT_DEVICE_TYPE:\t${ROOT_DEVICE_TYPE}"
         echo -e "CLEAN_BUILD:\t\t${CLEAN_BUILD}"
+        echo -e "ARM_ARCH: \t\t${ARM_ARCH}"
+        echo -e "KERNEL_VERSION:\t${KERNEL_VERSION}"
     fi
+}
+
+function determine_android_product()
+{
+    if [ "${ARM_ARCH}" == "32" ]; then
+        ANDROID_PRODUCT=PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
+    else
+        ANDROID_PRODUCT=PRODUCT-aosp_${BOARD_NAME}64-${BUILD_TAG}
+    fi
+}
+
+function get_out_dir()
+{
+    local out_dir=
+    if [ "${ARM_ARCH}" == "32" ]; then
+        out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+    else
+        out_dir="${TOP}/out/target/product/${BOARD_NAME}64"
+    fi
+    echo -n ${out_dir}
 }
 
 function clean_up()
@@ -300,18 +331,26 @@ function build_uboot()
         cd ${TOP}/u-boot
         make distclean
 
-        echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
-        case ${ROOT_DEVICE_TYPE} in
-            sd) apply_uboot_sd_root ;;
-            nand) apply_uboot_nand_root ;;
-        esac
+        # comment out below because auto fixing muddles user 
+        # echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
+        # case ${ROOT_DEVICE_TYPE} in
+        #     sd) apply_uboot_sd_root ;;
+        #     nand) apply_uboot_nand_root ;;
+        # esac
 
-        make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
-        make -j8
-        check_result "build-uboot"
-        if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
-            mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        if [ "${ARM_ARCH}" == "32" ]; then
+            make ${CHIP_NAME}_${BOARD_PURE_NAME}_config
+            make -j8
+        else
+            make ${CHIP_NAME}_arm64_${BOARD_PURE_NAME}_config
+            CROSS_COMPILE=aarch64-linux-gnu- make -j8
         fi
+        check_result "build-uboot"
+
+        # comment out below because auto fixing muddles user 
+        # if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
+        #     mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
+        # fi
         cd ${TOP}
 
         echo "---------- End of build u-boot"
@@ -336,6 +375,32 @@ function apply_kernel_nand_config()
     echo ${dst_config}
 }
 
+function get_arch()
+{
+    local arch=
+    if [ "${ARM_ARCH}" == "32" ]; then
+        arch="arm"
+    else
+        arch="arm64"
+    fi
+    echo -n ${arch}
+}
+
+function get_kernel_image()
+{
+    local image=
+    if [ "${KERNEL_VERSION}" == "3.4.39" ]; then
+        image="uImage"
+    else
+        if [ "${ARM_ARCH}" == "32" ]; then
+            image="zImage"
+        else
+            image="Image"
+        fi
+    fi
+    echo -n ${image}
+}
+
 function build_kernel()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_KERNEL} == "true" ]; then
@@ -344,10 +409,8 @@ function build_kernel()
         echo "build kernel"
         echo "=============================================="
 
-        if [ ! -e ${TOP}/kernel ]; then
-            cd ${TOP}
-            ln -s linux/kernel/kernel-3.4.39 kernel
-        fi
+        rm -f ${TOP}/kernel
+        ln -s linux/kernel/kernel-${KERNEL_VERSION} kernel
 
         cd ${TOP}/kernel
 
@@ -367,9 +430,15 @@ function build_kernel()
         fi
 
         make distclean
-        cp arch/arm/configs/${kernel_config} .config
-        yes "" | make ARCH=arm oldconfig
-        make ARCH=arm uImage -j8
+        local arch=$(get_arch)
+        local image=$(get_kernel_image)
+
+        cp arch/${arch}/configs/${kernel_config} .config
+        yes "" | make ARCH=${arch} oldconfig
+        make ARCH=${arch} ${image} -j8
+        if [ "${KERNEL_VERSION}" != "3.4.39" ]; then
+            make ARCH=${arch} nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb
+        fi
 
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             rm -f ${TOP}/arch/arm/configs/${kernel_config}
@@ -389,14 +458,25 @@ function build_module()
         echo "build modules"
         echo "=============================================="
 
-        local out_dir=${TOP}/out/target/product/${BOARD}
+        local out_dir=$(get_out_dir)
         mkdir -p ${out_dir}/system/lib/modules
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo -n -e "build vr driver..."
+        local ogl_driver=
+        if [ "${KERNEL_VERSION}" == "3.4.39" ]; then
+            ogl_driver=${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
+        else
+            ogl_driver=${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/mali
         fi
-        cd ${TOP}/hardware/samsung_slsi/slsiap/prebuilt/modules/vr
-        ./build.sh
+
+        if [ ${VERBOSE} == "true" ]; then
+            echo -n -e "build ogl driver..."
+        fi
+        cd ${ogl_driver}
+        local arch=
+        if [ "${ARM_ARCH}" == "64" ]; then
+            arch="arm64"
+        fi
+        ./build.sh ${arch}
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
         fi
@@ -404,8 +484,19 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build coda driver..."
         fi
-        cd ${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
-        ./build.sh
+
+        local coda_driver=
+        if [ "${ARM_ARCH}" == "32" ]; then
+            coda_driver=${TOP}/linux/platform/${CHIP_NAME}/modules/coda960
+            # TODO
+            cd ${coda_driver}
+            ./build.sh
+        else
+            coda_driver=${TOP}/linux/platform/${CHIP_NAME}/modules/coda960_64
+        fi
+        # TODO
+        # cd ${coda_driver}
+        # ./build.sh
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
         fi
@@ -414,7 +505,11 @@ function build_module()
             echo -n -e "build wifi driver..."
         fi
         cd ${TOP}/${WIFI_DRIVER_PATH}
-        ./build.sh
+        local arch=
+        if [ "${ARM_ARCH}" == "64" ]; then
+            arch="arm64"
+        fi
+        ./build.sh ${arch}
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
         fi
@@ -430,7 +525,7 @@ function build_module()
 
 function make_android_root()
 {
-    local out_dir=${TOP}/out/target/product/${BOARD_NAME}
+    local out_dir=$(get_out_dir)
     cd ${out_dir}/root
     sed -i -e '/mount\ yaffs2/ d' -e '/on\ fs/ d' -e '/mount\ mtd/ d' -e '/Mount\ \// d' init.rc
 
@@ -446,7 +541,11 @@ function make_android_root()
 
     # arrange permission
     chmod 644 *.prop
-    chmod 644 *.${BOARD_NAME}
+    if [ "${ARM_ARCH}" == "32" ]; then
+        chmod 644 *.${BOARD_NAME}
+    else
+        chmod 644 *.${BOARD_NAME}64
+    fi
     chmod 644 *.rc
 
     cd ..
@@ -480,7 +579,7 @@ function remove_android_banned_files()
 
 function refine_android_system()
 {
-    local out_dir=${TOP}/out/target/product/${BOARD_NAME}
+    local out_dir=$(get_out_dir)
     cd ${out_dir}/system
     chmod 644 *.prop
     chmod 644 lib/modules/*
@@ -557,7 +656,7 @@ function apply_kernel_ion_header()
 
 function build_cts()
 {
-    make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} cts
+    make -j8 ${ANDROID_PRODUCT} cts
 }
 
 function sign_system_private_app()
@@ -593,7 +692,7 @@ function build_android()
             apply_kernel_ion_header
         fi
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG}
+        make -j8 ${ANDROID_PRODUCT}
         check_result "build-android"
 
         make_android_root
@@ -619,7 +718,7 @@ function build_dist()
 
         #patch_android
 
-        make -j8 PRODUCT-aosp_${BOARD_NAME}-${BUILD_TAG} dist
+        make -j8 ${ANDROID_PRODUCT} dist
 
         cp ${TOP}/out/dist/aosp_${BOARD_NAME}-target_files-eng.$(whoami).zip ${RESULT_DIR}/${BOARD_NAME}-target_files.zip
 
@@ -714,18 +813,25 @@ function build_dist()
 function make_boot()
 {
     vmsg "start make_boot"
-    local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+    local out_dir=$(get_out_dir)
 
     mkdir -p ${RESULT_DIR}/boot
 
-    cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
+    local arch=$(get_arch)
+    local image=$(get_kernel_image)
+    cp ${TOP}/kernel/arch/${arch}/boot/${image} ${RESULT_DIR}/boot
+    if [ "${KERNEL_VERSION}" != "3.4.39" ]; then
+        cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb ${RESULT_DIR}/boot
+    fi
+
+    [ "${KERNEL_VERSION}" == "3.18" ] && [ "${arch}" == "arm" ] && cat ${TOP}/kernel/arch/arm/boot/zImage ${TOP}/kernel/arch/arm/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb > ${RESULT_DIR}/boot/zImage.dtb
 
     copy_bmp_files_to_boot ${BOARD_NAME}
 
     cp -a ${out_dir}/root ${RESULT_DIR}
     ${TOP}/device/nexell/tools/mkinitramfs.sh ${RESULT_DIR}/root ${RESULT_DIR}
     cp ${RESULT_DIR}/root.img.gz ${RESULT_DIR}/boot
-    cp ${RESULT_DIR}/root.img.gz ${TOP}/out/target/product/${BOARD_NAME}/ramdisk.img
+    cp ${RESULT_DIR}/root.img.gz ${out_dir}/ramdisk.img
 
     if [ -f ${out_dir}/ramdisk-recovery.img ]; then
         cp ${out_dir}/ramdisk-recovery.img ${RESULT_DIR}/boot
@@ -738,7 +844,7 @@ function make_boot()
 function make_system()
 {
     vmsg "start make_system"
-    local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+    local out_dir=$(get_out_dir)
     cp -a ${out_dir}/system ${RESULT_DIR}
 
     #apply_android_overlay
@@ -753,7 +859,7 @@ function make_system()
 function make_cache()
 {
     vmsg "start make_cache"
-    local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+    local out_dir=$(get_out_dir)
     cp -a ${out_dir}/cache ${RESULT_DIR}
 	#cp ${out_dir}/cache.img ${RESULT_DIR}
 	make_ext4 ${BOARD_NAME} cache
@@ -764,7 +870,7 @@ function make_cache()
 function make_userdata()
 {
     vmsg "start make_userdata"
-    local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+    local out_dir=$(get_out_dir)
     cp -a ${out_dir}/data ${RESULT_DIR}/userdata
 	cp ${out_dir}/userdata.img ${RESULT_DIR}
 
@@ -779,7 +885,7 @@ function post_process()
         echo "post processing"
         echo "=============================================="
 
-        local out_dir="${TOP}/out/target/product/${BOARD_NAME}"
+        local out_dir=$(get_out_dir)
         echo ${out_dir}
 
         rm -rf ${RESULT_DIR}
@@ -807,12 +913,17 @@ parse_args $@
 print_args
 export VERBOSE
 export ANDROID_VERSION_MAJOR=$(get_android_version_major)
+export ARM_ARCH
+# for device.mk get target_arch
+mkdir -p ${RESULT_DIR}
+echo -n ${ARM_ARCH} > ${RESULT_DIR}/arm_arch
 set_android_toolchain_and_check
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 #BOARD_PURE_NAME=${BOARD_NAME%_*}
 BOARD_PURE_NAME=${BOARD_NAME#*_}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
+determine_android_product
 clean_up
 build_uboot
 build_kernel
@@ -820,3 +931,4 @@ build_module
 build_android
 post_process
 build_dist
+echo -n ${ARM_ARCH} > ${RESULT_DIR}/arm_arch

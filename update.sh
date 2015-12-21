@@ -135,14 +135,32 @@ function get_board_name()
     vmsg "BOARD_NAME: ${BOARD_NAME}"
 }
 
+function get_real_board_name()
+{
+    local board_name=${1}
+    echo -n "${board_name%[0-9][0-9]}"
+}
+
+function is_sd_device2()
+{
+    local f="$1"
+    local tmp=$(cat $f | grep mmcblk | grep system | head -n1)
+    if (( ${#tmp} > 0 )); then
+        echo -n "true"
+    else
+        echo -n "false"
+    fi 
+}
+
 function is_sd_device()
 {
     local f="$1"
     local tmp=$(cat $f | grep by-num | head -n1)
     if (( ${#tmp} > 0 )); then
-        echo "true"
+        echo -n "true"
     else
-        echo "false"
+        # echo "false"
+        is_sd_device2 $f
     fi
 }
 
@@ -159,7 +177,8 @@ function is_nand_device()
 
 function get_root_device()
 {
-    local fstab=${RESULT_DIR}/root/fstab.${BOARD_NAME}
+    local real_board_name=$(get_real_board_name ${BOARD_NAME})
+    local fstab=${RESULT_DIR}/root/fstab.${real_board_name}
     if [ ! -f ${fstab} ]; then
         echo "Error: can't find ${fstab} file... You must build before packaging"
         exit 1
@@ -167,7 +186,12 @@ function get_root_device()
 
     local is_sd=$(is_sd_device ${fstab})
     if [ ${is_sd} == "true" ]; then
-        ROOT_DEVICE_TYPE="sd$(get_sd_device_number ${fstab})"
+        local sd_device_number=$(get_sd_device_number ${fstab})
+        if [ "${sd_device_number}x" == "x" ]; then
+            ROOT_DEVICE_TYPE="${BOOT_DEVICE_TYPE}"
+        else
+            ROOT_DEVICE_TYPE="sd$(get_sd_device_number ${fstab})"
+        fi
     else
         local is_nand=$(is_nand_device ${fstab})
         if [ ${is_nand} == "true" ]; then
@@ -212,7 +236,8 @@ function change_fstab_for_sd()
 {
     if [ ${BOOT_DEVICE_TYPE%%[0-9]} == "sd" ]; then
         local src_file=${RESULT_DIR}/root/fstab.${BOARD_NAME}
-        local fstab=${TOP}/device/nexell/${BOARD_NAME}/fstab.${BOARD_NAME}
+        local real_board_name=$(get_real_board_name ${BOARD_NAME})
+        local fstab=${TOP}/device/nexell/${real_board_name}/fstab.${real_board_name}
         local sd_boot_device_num=$(get_sd_boot_device_number)
         local sd_root_device_num=$(get_sd_device_number ${fstab})
         if [ "tmp${sd_boot_device_num}" != "tmp${sd_root_device_num}" ]; then
@@ -267,9 +292,10 @@ function create_partmap_for_spirom()
 function update_partitionmap()
 {
     local partmap_file=
+    local real_board_name=$(get_real_board_name ${BOARD_NAME})
     if [ ${PARTMAP} == "nofile" ]; then
-        if [ -f ${TOP}/device/nexell/${BOARD_NAME}/partmap.txt ]; then
-            partmap_file=${TOP}/device/nexell/${BOARD_NAME}/partmap.txt
+        if [ -f ${TOP}/device/nexell/${real_board_name}/partmap.txt ]; then
+            partmap_file=${TOP}/device/nexell/${real_board_name}/partmap.txt
         else
             if [ ${BOOT_DEVICE_TYPE} == "spirom" ]; then
                 create_partmap_for_spirom
@@ -300,21 +326,21 @@ function update_2ndboot()
         local option_b=
         case ${BOOT_DEVICE_TYPE} in
             spirom)
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_spi.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_spi.txt
+                secondboot_file=${secondboot_dir}/2ndboot_$(get_real_board_name ${BOARD_PURE_NAME})_spi.bin
+                nsih_file=${nsih_dir}/nsih_$(get_real_board_name ${BOARD_PURE_NAME})_spi.txt
                 option_b="SPI"
                 ;;
             sd0 | sd2)
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_sdmmc.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_sdmmc.txt
+                secondboot_file=${secondboot_dir}/2ndboot_$(get_real_board_name ${BOARD_PURE_NAME})_sdmmc.bin
+                nsih_file=${nsih_dir}/nsih_$(get_real_board_name ${BOARD_PURE_NAME})_sdmmc.txt
                 option_b="SD"
                 ;;
             nand)
-				local nand_sizes=$(get_nand_sizes_from_config_file ${BOARD_PURE_NAME})
+                local nand_sizes=$(get_nand_sizes_from_config_file $(get_real_board_name ${BOARD_PURE_NAME}))
 				local page_size=$(echo ${nand_sizes} | awk '{print $1}')
 
-                secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_nand.bin
-                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_nand.txt
+                secondboot_file=${secondboot_dir}/2ndboot_$(get_real_board_name ${BOARD_PURE_NAME})_nand.bin
+                nsih_file=${nsih_dir}/nsih_$(get_real_board_name ${BOARD_PURE_NAME})_nand.txt
                 option_d="-d nand"
                 option_p="-p ${page_size}"
                 ;;
@@ -333,8 +359,6 @@ function update_2ndboot()
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
-        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/nx_bingen -t 2ndboot ${option_d} -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
-        #${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c S5P4418 -t 2ndboot -b ${option_b} -n ${nsih_file} -i ${secondboot_file} -o ${secondboot_out_file} -d ffff0000 -l ffff0000
 		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
 		else
@@ -479,7 +503,8 @@ function update_boot()
 {
     if [ ${UPDATE_BOOT} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_BOOT}  == "true" ]; then
-			make_ext4 ${BOARD_NAME} boot
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+			make_ext4 ${real_board_name} boot
         fi
         flash boot ${RESULT_DIR}/boot.img
     else
@@ -490,20 +515,53 @@ function update_boot()
 
 }
 
+function get_arch()
+{
+    local tmp=$(cat kernel/.config | grep "CONFIG_64BIT=y" | head -n 1)
+    if (( ${#tmp} > 0 )); then
+        echo -n "arm64"
+    else
+        echo -n "arm"
+    fi
+}
+
+function get_kernel_patch_level()
+{
+    local kernel_patch_level=$(cat kernel/Makefile | grep "PATCHLEVEL =" | cut -f 3 -d ' ')
+    echo -n "${kernel_patch_level}"
+}
+
+function get_kernel_image()
+{
+    local kernel_patch_level=$(get_kernel_patch_level)
+    if [ "${kernel_patch_level}" == "4" ]; then
+        echo -n "kernel/arch/arm/boot/uImage"
+    else
+        local arch=$(get_arch)
+        if [ "${arch}" == "arm" ]; then
+            echo -n "kernel/arch/arm/boot/zImage"
+        else
+            echo -n "kernel/arch/arm64/boot/Image"
+        fi
+    fi
+}
+
 function update_kernel()
 {
     if [ ${UPDATE_KERNEL} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_KERNEL} == "true" ]; then
-            cp ${TOP}/kernel/arch/arm/boot/uImage ${RESULT_DIR}/boot
-            make_ext4 ${BOARD_NAME} boot
+            cp ${TOP}/$(get_kernel_image) ${RESULT_DIR}/boot
+            local kernel_patch_level=$(get_kernel_patch_level)
+            local arch=$(get_arch)
+            if [ "${kernel_patch_level}" == "18" ]; then
+                cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-$(get_real_board_name ${BOARD_PURE_NAME}).dtb ${RESULT_DIR}/boot
+                [ "${arch}" == "arm" ] && cat ${TOP}/kernel/arch/arm/boot/zImage ${TOP}/kernel/arch/arm/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb > ${RESULT_DIR}/boot/zImage.dtb
+            fi
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+            make_ext4 ${real_board_name} boot
         fi
 
-        if [ ! -f ${RESULT_DIR}/boot/uImage ]; then
-            echo "Error: can't find uImage check build!!!"
-            exit 1
-        fi
-
-            update_boot 1
+        update_boot 1
     fi
 }
 
@@ -520,11 +578,11 @@ function update_rootfs()
                 exit 1
             fi
 
-			make_ext4 ${BOARD_NAME} boot
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+			make_ext4 ${real_board_name} boot
         fi
 
-
-            update_boot 1
+        update_boot 1
     fi
 }
 
@@ -534,7 +592,8 @@ function update_bmp()
         if [ ${UPDATE_BMP} == "true" ]; then
             copy_bmp_files_to_boot ${BOARD_NAME}
 
-			make_ext4 ${BOARD_NAME} boot
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+            make_ext4 ${real_board_name} boot
         fi
 
 		update_boot 1
@@ -545,9 +604,11 @@ function update_system()
 {
     if [ ${UPDATE_SYSTEM} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_SYSTEM} == "true" ]; then
-			make_ext4 ${BOARD_NAME} system
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+			make_ext4 ${real_board_name} system
         fi
 
+        echo "update_system"
         flash system ${RESULT_DIR}/system.img
     fi
 }
@@ -556,7 +617,8 @@ function update_cache()
 {
     if [ ${UPDATE_CACHE} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         if [ ${UPDATE_CACHE} == "true" ]; then
-			make_ext4 ${BOARD_NAME} cache
+            local real_board_name=$(get_real_board_name ${BOARD_NAME})
+			make_ext4 ${real_board_name} cache
         fi
 
         flash cache ${RESULT_DIR}/cache.img
@@ -597,9 +659,10 @@ function get_ecid()
 
 function recalc_userdata_size()
 {
-    local boot_size=$(get_partition_size ${BOARD_NAME} boot)
-    local system_size=$(get_partition_size ${BOARD_NAME} system)
-    local cache_size=$(get_partition_size ${BOARD_NAME} cache)
+    local real_board_name=$(get_real_board_name ${BOARD_NAME})
+    local boot_size=$(get_partition_size ${real_board_name} boot)
+    local system_size=$(get_partition_size ${real_board_name} system)
+    local cache_size=$(get_partition_size ${real_board_name} cache)
     local misc_size=0x800000
     local recovery_size=0x1600000
     local extpartinfo_size=0x300000
@@ -610,24 +673,49 @@ function recalc_userdata_size()
 function update_hdcp_key()
 {
     # psw0523 for HDCP KEY
+    local real_board_name=$(get_real_board_name ${BOARD_NAME})
     local ecid=$(get_ecid)
     # local dst_file=ENCRYPTED_HDCP_KEY_TABLE.bin
-    make_hdcp_keyfile ${TOP}/device/nexell/${BOARD_NAME}/hdcp_raw_key.bin ${RESULT_DIR}/ENCRYPTED_HDCP_KEY_TABLE.bin ${ecid}
+    make_hdcp_keyfile ${TOP}/device/nexell/${real_board_name}/hdcp_raw_key.bin ${RESULT_DIR}/ENCRYPTED_HDCP_KEY_TABLE.bin ${ecid}
     cp ${RESULT_DIR}/ENCRYPTED_HDCP_KEY_TABLE.bin ${RESULT_DIR}/userdata
     chmod 777 ${RESULT_DIR}/userdata/ENCRYPTED_HDCP_KEY_TABLE.bin
     # end HDCP KEY
+}
+
+function dump_partition_size()
+{
+    local real_board_name=$(get_real_board_name ${BOARD_NAME})
+    local boot_size=$(get_partition_size ${real_board_name} boot)
+    local system_size=$(get_partition_size ${real_board_name} system)
+    local cache_size=$(get_partition_size ${real_board_name} cache)
+    local misc_size=0x800000
+    local recovery_size=0x1600000
+    local extpartinfo_size=0x300000
+    echo "real_board_name --> ${real_board_name}"
+    echo "boot_size --> ${boot_size}"
+    echo "system_size --> ${system_size}"
+    echo "cache_size --> ${cache_size}"
+    echo "misc_size --> ${misc_size}"
+    echo "recovery_size --> ${recovery_size}"
+    echo "extpartinfo_size --> ${extpartinfo_size}"
+    echo "ROOT_DEVICE_SIZE --> ${ROOT_DEVICE_SIZE}"
 }
 
 function update_userdata()
 {
     if [ ${UPDATE_USERDATA} == "true" ] || [ ${UPDATE_ALL} == "true" ]; then
         local user_data_size=$(recalc_userdata_size)
+        echo "user_data_size ----------> ${user_data_size}"
+
+        # for debugging
+        # dump_partition_size
 
         # for HDCP KEY
         # update_hdcp_key
         # end HDCP KEY
 
-		make_ext4 ${BOARD_NAME} userdata ${user_data_size}
+        local real_board_name=$(get_real_board_name ${BOARD_NAME})
+		make_ext4 ${real_board_name} userdata ${user_data_size}
 
         flash userdata ${RESULT_DIR}/userdata.img
     fi
@@ -647,22 +735,19 @@ CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 get_root_device
 get_root_device_size
 
-# update_hdcp_key
-# exit 0
-
 update_partitionmap
-if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
-#nand: release)
-export ANDROID_VERSION_MAJOR=$(get_android_version_major)
-set_android_toolchain_and_check
 
-update_2ndboot
-update_bootloader
+if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
+    #nand: release)
+    export ANDROID_VERSION_MAJOR=$(get_android_version_major)
+    set_android_toolchain_and_check
+
+    update_2ndboot
+    update_bootloader
 else
-update_2ndboot
-update_bootloader
+    update_2ndboot
+    update_bootloader
 fi
-change_fstab_for_sd
 
 if [ ${UPDATE_BOOT} == "false" ] && [ ${UPDATE_ALL} == "false" ]; then
 	update_kernel

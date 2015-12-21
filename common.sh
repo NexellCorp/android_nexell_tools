@@ -2,9 +2,6 @@
 
 set -e
 
-#P_NAME=s5p6818
-#PLAT_NAME=plat-s5p6818
-
 function check_result()
 {
     job=$1
@@ -14,31 +11,55 @@ function check_result()
     fi
 }
 
+function is_64bit()
+{
+    local board_name=${1}
+    local src_file=${TOP}/device/nexell/${board_name}/BoardConfig.mk
+    local result=$(grep TARGET_ARCH ${src_file} | grep arm64)
+    if [ "${result}x" == "x" ]; then
+        echo -n 0
+    else
+        echo -n 1
+    fi
+}
+
+
 function set_android_toolchain_and_check()
 {
-    local toolchain_version=
-    if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
-        toolchain_version=4.6
-    elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
-        toolchain_version=4.8
+    if [ "${ARM_ARCH}" == "64" ]; then
+        echo "PATH setting for android aarch64 toolchain"
+        export PATH=${TOP}/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin:$PATH
+        aarch64-linux-android-gcc -v
+        if [ $? -ne 0 ]; then
+            echo "Error: can't check aarch64-linux-android-gcc"
+            echo "Check android source"
+            exit 1
+        fi
     else
-        echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
-        exit 1
-    fi
+        local toolchain_version=
+        if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
+            toolchain_version=4.6
+        elif [ ${ANDROID_VERSION_MAJOR} == "5" ]; then
+            toolchain_version=4.8
+        else
+            echo "ANDROID_VERSION_MAJOR is abnormal!!! ==> ${ANDROID_VERSION_MAJOR}"
+            exit 1
+        fi
 
-    if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin ]; then
-        echo "Error: can't find android toolchain!!!"
-        echo "Check android source"
-        exit 1
-    fi
+        if [ ! -d prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin ]; then
+            echo "Error: can't find android toolchain!!!"
+            echo "Check android source"
+            exit 1
+        fi
 
-    echo "PATH setting for android toolchain"
-    export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin/:$PATH
-    arm-eabi-gcc -v
-    if [ $? -ne 0 ]; then
-        echo "Error: can't check arm-eabi-gcc"
-        echo "Check android source"
-        exit 1
+        echo "PATH setting for android toolchain"
+        export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-${toolchain_version}/bin/:$PATH
+        arm-eabi-gcc -v
+        if [ $? -ne 0 ]; then
+            echo "Error: can't check arm-eabi-gcc"
+            echo "Check android source"
+            exit 1
+        fi
     fi
 }
 
@@ -600,6 +621,7 @@ function replace_uImage_initramfs()
 function get_cpu_variant2()
 {
      board_config="device/nexell/$1/BoardConfig.mk"
+     test -d ${board_config} || board_config="device/nexell/${1%[0-9][0-9]}/BoardConfig.mk"
      cpu_variant2=$(grep TARGET_CPU_VARIANT2 ${board_config} | awk '{print $3}')
      echo ${cpu_variant2}
 }
