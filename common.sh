@@ -23,7 +23,6 @@ function is_64bit()
     fi
 }
 
-
 function set_android_toolchain_and_check()
 {
     if [ "${ARM_ARCH}" == "64" ]; then
@@ -61,6 +60,37 @@ function set_android_toolchain_and_check()
             exit 1
         fi
     fi
+}
+
+function install_external_toolchain_to_opt()
+{
+    local install_tool_path=${1}
+    local install_tool=$(basename ${install_tool_path})
+    local dst_dir=/opt/crosstools
+    if [ ! -d ${dst_dir} ]; then
+        sudo mkdir -p ${dst_dir}
+    fi
+    sudo cp ${install_tool_path} ${dst_dir}
+    cd ${dst_dir}
+    sudo tar xvzf ${install_tool}
+    cd ${TOP}
+}
+
+function set_optee_toolchain_and_check()
+{
+    # 32bit
+    if [ ! -d /opt/crosstools/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf/bin ]; then
+        local toolchain_suite=linux/platform/common/tools/crosstools/gcc-linaro-4.9-2014.11-x86_64_aarch64-linux-gnu.tar.gz
+        install_external_toolchain_to_opt ${toolchain_suite}
+    fi
+
+    # 64bit
+    if [ ! -d /opt/crosstools/gcc-linaro-4.9-2014.11-x86_64_aarch64-linux-gnu/bin ]; then
+        local toolchain_suite=linux/platform/common/tools/crosstools/gcc-linaro-4.9-2014.11-x86_64_aarch64-linux-gnu.tar.gz
+        install_external_toolchain_to_opt ${toolchain_suite}
+    fi
+
+    export PATH=/opt/crosstools/gcc-linaro-4.9-2014.11-x86_64_aarch64-linux-gnu/bin:/opt/crosstools/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf/bin:$PATH
 }
 
 function choice {

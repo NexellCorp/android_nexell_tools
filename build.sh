@@ -37,6 +37,8 @@ KERNEL_VERSION="3.4.39"
 
 ANDROID_PRODUCT=
 
+SECURE=false
+
 function check_top()
 {
     if [ ! -d .repo ]; then
@@ -47,13 +49,14 @@ function check_top()
 
 function usage()
 {
-    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -a <32 or 64> -k <kernel-version> -t u-boot -t kernel -t module -t android -t dist [-i previous_target.zip -d 2ndboot -d u-boot ]]"
+    echo "Usage: $0 -b <board-name> [-r <root-device-type> -c -w <wifi-device-name> -a <32 or 64> -k <kernel-version> -s -t u-boot -t kernel -t module -t android -t dist [-i previous_target.zip -d 2ndboot -d u-boot ]]"
     echo -e '\n -b <board-name> : target board name (available boards: "'"$(get_available_board)"'")'
     echo " -r <root-device-type> : your root device type(sd, nand, usb), default sd"
     echo " -c : clean build, default no"
     echo " -w : wifi device name (rtl8188, rtl8712, bcm), default rtl8188"
     echo " -a : 32 or 64, default 32"
     echo " -k : kernel version, default 3.4.39"
+    echo " -s : secure enabled"
     echo " -v : if you want to view verbose log message, specify this, default no"
     echo " -t u-boot  : if you want to build u-boot, specify this, default yes"
     echo " -t kernel  : if you want to build kernel, specify this, default yes"
@@ -68,7 +71,7 @@ function usage()
 
 function parse_args()
 {
-    TEMP=`getopt -o "b:r:t:i:d:a:k:chv" -- "$@"`
+    TEMP=`getopt -o "b:r:t:i:d:a:k:chvs" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -79,6 +82,7 @@ function parse_args()
             -w ) WIFI_DEVICE_NAME=$2; shift 2 ;;
             -a ) ARM_ARCH=$2; shift 2 ;;
             -k ) KERNEL_VERSION=$2; shift 2 ;;
+            -s ) SECURE=true; shift 1 ;;
             -t ) case "$2" in
                     u-boot  ) BUILD_ALL=false; BUILD_UBOOT=true ;;
                     kernel  ) BUILD_ALL=false; BUILD_KERNEL=true ;;
@@ -127,6 +131,9 @@ function print_args()
             fi
             if [ ${BUILD_DIST} == "true" ]; then
                 echo -e "Build:\t\t\tdistribution"
+            fi
+            if [ ${SECURE} == "true" ]; then
+                echo -e "Secure Enabled"
             fi
         fi
         echo -e "ROOT_DEVICE_TYPE:\t${ROOT_DEVICE_TYPE}"
@@ -441,6 +448,12 @@ function get_kernel_image()
     echo -n ${image}
 }
 
+function apply_secure_kernel_config()
+{
+    local config_file=$1
+    sed -i "s/# CONFIG_SUPPORT_OPTEE_OS is not set/CONFIG_SUPPORT_OPTEE_OS=y/g" ${config_file}
+}
+
 function build_kernel()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_KERNEL} == "true" ]; then
@@ -474,6 +487,9 @@ function build_kernel()
         local image=$(get_kernel_image)
 
         cp arch/${arch}/configs/${kernel_config} .config
+        if [ ${SECURE} == "true" ]; then
+            apply_secure_kernel_config .config
+        fi
         yes "" | make ARCH=${arch} oldconfig
         make ARCH=${arch} ${image} -j8
         if [ "${KERNEL_VERSION}" != "3.4.39" ]; then
@@ -489,6 +505,39 @@ function build_kernel()
         echo "---------- End of build kernel"
     fi
 }
+
+function build_optee()
+{
+    if [ ${BUILD_ALL} == "true" ] && [ ${SECURE} == "true" ]; then
+        echo ""
+        echo "=============================================="
+        echo "build optee"
+        echo "=============================================="
+
+        local optee_path=${TOP}/linux/secureos/optee_os_3.18
+        cd ${optee_path}
+        make build-bl1
+        check_result "build-bl1"
+        make build-lloader
+        check_result "build-lloader"
+        make build-bl2
+        check_result "build-bl2"
+        make build-bl32
+        check_result "build-bl32"
+        make build-fip
+        check_result "build-fip"
+        make build-optee-test
+        check_result "build-optee-test"
+        make build-helloworld
+        check_result "build-helloworld"
+        make build-aes-perf
+        check_result "build-aes-perf"
+        cd ${TOP}
+
+        echo "---------- End of build optee"
+    fi
+}
+
 
 function build_module()
 {
@@ -555,9 +604,19 @@ function build_module()
         fi
         cd ${TOP}
 
-        if [ ${VERBOSE} == "true" ]; then
-            echo "End"
+        if [ ${SECURE} == "true" ]; then
+            if [ ${VERBOSE} == "true" ]; then
+                echo -n -e "build optee driver..."
+            fi
+            local optee_driver_path=${TOP}/linux/secureos/optee_os_3.18
+            cd ${optee_driver_path}
+            ./build.sh
+            if [ ${VERBOSE} == "true" ]; then
+                echo "End"
+            fi
+            cd ${TOP}
         fi
+
 
         echo "---------- End of build modules"
     fi
@@ -933,6 +992,14 @@ function post_process()
 
         cp ${TOP}/u-boot/u-boot.bin ${RESULT_DIR}
 
+        if [ ${SECURE} == "true" ]; then
+            # TODO : optee image must be one image : l-loader.bin + fip.bin
+            cp ${TOP}/linux/secureos/optee_os_3.18/l-loader/l-loader.bin ${RESULT_DIR}
+            cp ${TOP}/linux/secureos/optee_os_3.18/arm-trusted-firmware/build/nxp5430/release/fip.bin ${RESULT_DIR}
+            mkdir -p ${RESULT_DIR}/userdata/optee
+            find ${TOP}/linux/secureos/optee_os_3.18 -name "*.ta" -exec cp {} ${RESULT_DIR}/userdata/optee \;
+        fi
+
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             query_nand_sizes ${BOARD_NAME}
         fi
@@ -958,6 +1025,9 @@ export ARM_ARCH
 mkdir -p ${RESULT_DIR}
 echo -n ${ARM_ARCH} > ${RESULT_DIR}/arm_arch
 set_android_toolchain_and_check
+if [ ${SECURE} == "true" ]; then
+    set_optee_toolchain_and_check
+fi
 CHIP_NAME=$(get_cpu_variant2 ${BOARD_NAME})
 #BOARD_PURE_NAME=${BOARD_NAME%_*}
 BOARD_PURE_NAME=${BOARD_NAME#*_}
@@ -967,6 +1037,7 @@ determine_android_product
 clean_up
 build_uboot
 build_kernel
+build_optee
 build_module
 build_android
 post_process
