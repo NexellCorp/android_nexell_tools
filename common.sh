@@ -131,6 +131,9 @@ function copy_bmp_files_to_boot()
     if [ -f ${TOP}/device/nexell/${board_name}/boot/update.bmp ]; then
         cp ${TOP}/device/nexell/${board_name}/boot/update.bmp $RESULT_DIR/boot
     fi
+    if [ -f ${TOP}/device/nexell/${board_name}/boot/recover-on-android.bmp ]; then
+        cp ${TOP}/device/nexell/${board_name}/boot/recover-on-android.bmp $RESULT_DIR/boot
+    fi
 }
 
 # check number
