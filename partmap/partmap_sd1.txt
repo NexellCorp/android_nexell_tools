@@ -3,7 +3,7 @@
 #   support device : eeprom, nand, mmc
 #   support fstype : 2nd, boot, raw, fat, ext4, ubi
 #
-flash=mmc,1:2ndboot:2nd:0x200,0x8e00;
+flash=mmc,1:2ndboot:2nd:0x200,0x7e00;
 flash=mmc,1:bootloader:boot:0x8000,0x77000;
 flash=mmc,1:boot:ext4:0x000100000,0x004000000;
 flash=mmc,1:system:ext4:0x04100000,0x2F200000;
