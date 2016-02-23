@@ -9,6 +9,7 @@ export TOP RESULT_DIR
 BUILD_ALL=true
 BUILD_UBOOT=false
 BUILD_KERNEL=false
+BUILD_NXUPDATE=false
 BUILD_MODULE=false
 BUILD_ANDROID=false
 BUILD_DIST=false
@@ -86,6 +87,7 @@ function parse_args()
             -t ) case "$2" in
                     u-boot  ) BUILD_ALL=false; BUILD_UBOOT=true ;;
                     kernel  ) BUILD_ALL=false; BUILD_KERNEL=true ;;
+                    nxupdate) BUILD_ALL=false; BUILD_NXUPDATE=true ;;
                     module  ) BUILD_ALL=false; BUILD_MODULE=true ;;
                     android ) BUILD_ALL=false; BUILD_ANDROID=true ;;
                     dist    ) BUILD_ALL=false; BUILD_DIST=true ;;
@@ -454,6 +456,42 @@ function apply_secure_kernel_config()
     sed -i "s/# CONFIG_SUPPORT_OPTEE_OS is not set/CONFIG_SUPPORT_OPTEE_OS=y/g" ${config_file}
 }
 
+function build_nxupdate()
+{
+    if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
+        echo ""
+        echo "=============================================="
+        echo "build nxupdate kernel"
+        echo "=============================================="
+
+        if [ ! -e ${TOP}/kernel ]; then
+            cd ${TOP}
+			ln -s linux/kernel/kernel-${KERNEL_VERSION} kernel
+        fi
+
+        cd ${TOP}/kernel
+
+        local kernel_config=${CHIP_NAME}_${BOARD_PURE_NAME}_update_defconfig
+
+        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            kernel_config=$(apply_kernel_nand_config)
+            echo "nand kernel config: ${kernel_config}"
+        fi
+
+        make distclean
+        cp arch/arm/configs/${kernel_config} .config
+        yes "" | make ARCH=arm oldconfig
+        make ARCH=arm uImage_update -j8
+
+        if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
+            rm -f ${TOP}/arch/arm/configs/${kernel_config}
+        fi
+
+        check_result "build-nxupdate kernel"
+
+        echo "---------- End of build nxupdate kernel"
+    fi
+}
 function build_kernel()
 {
     if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_KERNEL} == "true" ]; then
@@ -462,8 +500,10 @@ function build_kernel()
         echo "build kernel"
         echo "=============================================="
 
-        rm -f ${TOP}/kernel
-        ln -s linux/kernel/kernel-${KERNEL_VERSION} kernel
+		if [ ! -e ${TOP}/kernel ]; then
+			cd ${TOP}
+        	ln -s linux/kernel/kernel-${KERNEL_VERSION} kernel
+        fi
 
         cd ${TOP}/kernel
 
@@ -922,6 +962,10 @@ function make_boot()
     if [ "${KERNEL_VERSION}" != "3.4.39" ]; then
         cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb ${RESULT_DIR}/boot
     fi
+	if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
+    cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
+    cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
+	fi
 
     [ "${KERNEL_VERSION}" == "3.18" ] && [ "${arch}" == "arm" ] && cat ${TOP}/kernel/arch/arm/boot/zImage ${TOP}/kernel/arch/arm/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb > ${RESULT_DIR}/boot/zImage.dtb
 
@@ -1036,6 +1080,7 @@ check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
 clean_up
 build_uboot
+build_nxupdate
 build_kernel
 build_optee
 build_module

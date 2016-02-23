@@ -20,6 +20,7 @@ UPDATE_BOOT=false
 UPDATE_SYSTEM=false
 UPDATE_USERDATA=false
 UPDATE_CACHE=false
+UPDATE_NXUPDATE=false
 VERBOSE=false
 
 # dynamic config
@@ -92,6 +93,7 @@ function parse_args()
                     2ndboot ) UPDATE_ALL=false; UPDATE_2NDBOOT=true ;;
                     u-boot  ) UPDATE_ALL=false; UPDATE_UBOOT=true ;;
                     kernel  ) UPDATE_ALL=false; UPDATE_KERNEL=true ;;
+					nxupdate) BUILD_ALL=false; UPDATE_NXUPDATE=true ;;
                     rootfs  ) UPDATE_ALL=false; UPDATE_ROOTFS=true ;;
                     bmp     ) UPDATE_ALL=false; UPDATE_BMP=true ;;
                     boot    ) UPDATE_ALL=false; UPDATE_BOOT=true ;;
@@ -373,7 +375,7 @@ function update_2ndboot()
 		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 			${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
 		else
-			${TOP}/linux/platform/${CHIP_NAME}/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+			${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
 		fi
         sync
         sleep 1
@@ -569,6 +571,10 @@ function update_kernel()
                 cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-$(get_real_board_name ${BOARD_PURE_NAME}).dtb ${RESULT_DIR}/boot
                 [ "${arch}" == "arm" ] && cat ${TOP}/kernel/arch/arm/boot/zImage ${TOP}/kernel/arch/arm/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb > ${RESULT_DIR}/boot/zImage.dtb
             fi
+		    if [ ${UPDATE_NXUPDATE} == "true" ]; then
+		    cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
+    		cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
+		    fi
             local real_board_name=$(get_real_board_name ${BOARD_NAME})
             make_ext4 ${real_board_name} boot
         fi
