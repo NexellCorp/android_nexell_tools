@@ -897,7 +897,7 @@ function build_dist()
             fi
         fi
         cd ${tmpdir}
-        zip -r -q ../target *
+        zip --symlinks -r -q ../target *
         cd ${TOP}
         if [ ${ANDROID_VERSION_MAJOR} == "4" ]; then
             cp build/tools/releasetools/common.py /tmp/
@@ -914,7 +914,7 @@ function build_dist()
                 unzip -o -q ${OTA_PREVIOUS_FILE} -d ${src_tmpdir}
                 cp ${RESULT_DIR}/boot.img ${src_tmpdir}/BOOTABLE_IMAGES
                 cd ${src_tmpdir}
-                zip -r -q ../src_target *
+                zip --symlinks -r -q ../src_target *
                 cd ${TOP}
                 i_option="-i ${RESULT_DIR}/src_target.zip"
             fi
