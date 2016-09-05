@@ -458,7 +458,7 @@ function apply_secure_kernel_config()
 
 function build_nxupdate()
 {
-    if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
+    if [ [ ${BUILD_NXUPDATE} == "true" ]; then
         echo ""
         echo "=============================================="
         echo "build nxupdate kernel"
@@ -962,7 +962,7 @@ function make_boot()
     if [ "${KERNEL_VERSION}" != "3.4.39" ]; then
         cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb ${RESULT_DIR}/boot
     fi
-	if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
+	if [ ${BUILD_NXUPDATE} == "true" ]; then
     cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
     cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
 	fi
