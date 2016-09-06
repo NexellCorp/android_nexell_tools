@@ -963,8 +963,8 @@ function make_boot()
         cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb ${RESULT_DIR}/boot
     fi
 	if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
-    cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
-    cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
+	cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
+	cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
 	fi
 
     [ "${KERNEL_VERSION}" == "3.18" ] && [ "${arch}" == "arm" ] && cat ${TOP}/kernel/arch/arm/boot/zImage ${TOP}/kernel/arch/arm/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb > ${RESULT_DIR}/boot/zImage.dtb
@@ -1080,7 +1080,7 @@ check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
 clean_up
 build_uboot
-#build_nxupdate
+build_nxupdate
 build_kernel
 build_optee
 build_module
