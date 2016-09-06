@@ -522,7 +522,7 @@ function build_kernel()
             echo "nand kernel config: ${kernel_config}"
         fi
 
-        make distclean
+#       make distclean
         local arch=$(get_arch)
         local image=$(get_kernel_image)
 
@@ -1080,7 +1080,7 @@ check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
 clean_up
 build_uboot
-build_nxupdate
+#build_nxupdate
 build_kernel
 build_optee
 build_module
