@@ -10,7 +10,7 @@ export TOP RESULT_DIR
 # user option
 BOOT_DEVICE_TYPE=
 PARTMAP="nofile"
-UPDATE_ALL=false
+UPDATE_ALL=true
 UPDATE_2NDBOOT=false
 UPDATE_UBOOT=false
 UPDATE_KERNEL=false

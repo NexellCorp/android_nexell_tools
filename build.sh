@@ -526,7 +526,12 @@ function build_kernel()
         local arch=$(get_arch)
         local image=$(get_kernel_image)
 
-        cp arch/${arch}/configs/${kernel_config} .config
+		if [ -f .config ]; then
+			echo ""
+		else
+			cp arch/${arch}/configs/${kernel_config} .config
+		fi
+
         if [ ${SECURE} == "true" ]; then
             apply_secure_kernel_config .config
         fi
@@ -963,7 +968,7 @@ function make_boot()
         cp ${TOP}/kernel/arch/${arch}/boot/dts/nexell/${CHIP_NAME}-${BOARD_PURE_NAME}.dtb ${RESULT_DIR}/boot
     fi
 	if [ ${BUILD_ALL} == "true" ] || [ ${BUILD_NXUPDATE} == "true" ]; then
-	cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
+#	cp ${TOP}/kernel/arch/arm/boot/uImage_update ${RESULT_DIR}/boot
 	cp ${TOP}/device/nexell/${BOARD_NAME}/ramdisk_update.gz ${RESULT_DIR}/boot
 	fi
 
@@ -1080,7 +1085,7 @@ check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
 clean_up
 build_uboot
-build_nxupdate
+#build_nxupdate
 build_kernel
 build_optee
 build_module
