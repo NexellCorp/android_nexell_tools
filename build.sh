@@ -638,12 +638,12 @@ function build_module()
         if [ ${VERBOSE} == "true" ]; then
             echo -n -e "build wifi driver..."
         fi
-        cd ${TOP}/${WIFI_DRIVER_PATH}
-        local arch=
-        if [ "${ARM_ARCH}" == "64" ]; then
-            arch="arm64"
-        fi
-        ./build.sh ${arch}
+        #cd ${TOP}/${WIFI_DRIVER_PATH}
+        #local arch=
+        #if [ "${ARM_ARCH}" == "64" ]; then
+        #    arch="arm64"
+        #fi
+        #./build.sh ${arch}
         if [ ${VERBOSE} == "true" ]; then
             echo "End"
         fi
