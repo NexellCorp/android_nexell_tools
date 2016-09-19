@@ -526,11 +526,11 @@ function build_kernel()
         local arch=$(get_arch)
         local image=$(get_kernel_image)
 
-		if [ -f .config ]; then
-			echo ""
-		else
+#		if [ -f .config ]; then
+#			echo ""
+#		else
 			cp arch/${arch}/configs/${kernel_config} .config
-		fi
+#		fi
 
         if [ ${SECURE} == "true" ]; then
             apply_secure_kernel_config .config
