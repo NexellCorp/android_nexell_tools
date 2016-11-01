@@ -404,6 +404,8 @@ function copy_partitionmap()
 {
 	if [ -f ${TOP}/device/nexell/${CHIP_NAME}_${BOARD_PURE_NAME}/partmap.txt ]; then
 		cp -f ${TOP}/device/nexell/${CHIP_NAME}_${BOARD_PURE_NAME}/partmap.txt  ${RESULT_DIR}/
+	elif [ -f ${TOP}/device/nexell/${BOARD_PURE_NAME}/partmap.txt ]; then
+		cp -f ${TOP}/device/nexell/${BOARD_PURE_NAME}/partmap.txt  ${RESULT_DIR}/
 	fi
 }
 
