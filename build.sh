@@ -458,7 +458,7 @@ function apply_secure_kernel_config()
 
 function build_nxupdate()
 {
-    if [ [ ${BUILD_NXUPDATE} == "true" ]; then
+    if  [ ${BUILD_NXUPDATE} == "true" ]; then
         echo ""
         echo "=============================================="
         echo "build nxupdate kernel"
