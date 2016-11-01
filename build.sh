@@ -347,7 +347,7 @@ function apply_uboot_nand_root()
 	enable_uboot_nand_memory_layout
 }
 
-function build_2ndboot()
+function make_2ndboot()
 {
     if [ ${BUILD_2NDBOOT} == "true" ] || [ ${BUILD_ALL} == "true" ]; then
         local secondboot_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/release/2ndboot
@@ -360,7 +360,7 @@ function build_2ndboot()
         case ${ROOT_DEVICE_TYPE} in
             spirom)
                 secondboot_file=${secondboot_dir}/2ndboot_${BOARD_PURE_NAME}_spi.bin
-                nsih_file=${nsih_dir}/nsih_$(get_real_board_name ${BOARD_PURE_NAME})_spi.txt
+                nsih_file=${nsih_dir}/nsih_${BOARD_PURE_NAME}_spi.txt
                 option_b="SPI"
                 ;;
             sd)
@@ -403,7 +403,7 @@ function build_2ndboot()
 function copy_partitionmap()
 {
 	if [ -f ${TOP}/device/nexell/${CHIP_NAME}_${BOARD_PURE_NAME}/partmap.txt ]; then
-		cp -f ${TOP}/device/nexell/${CHIP_NAME}_${BOARD_PURE_NAME}/partmap.txt  ${RESULT_DIR}
+		cp -f ${TOP}/device/nexell/${CHIP_NAME}_${BOARD_PURE_NAME}/partmap.txt  ${RESULT_DIR}/
 	fi
 }
 
@@ -1111,7 +1111,8 @@ function post_process()
         if [ ${ROOT_DEVICE_TYPE} == "nand" ]; then
             query_nand_sizes ${BOARD_NAME}
         fi
-
+		copy_partitionmap
+		make_2ndboot
         make_boot
         make_system
         make_cache
@@ -1143,8 +1144,6 @@ check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
 clean_up
-copy_partitionmap
-build_2ndboot
 build_uboot
 build_nxupdate
 build_kernel
