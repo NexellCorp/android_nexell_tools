@@ -17,7 +17,7 @@ pushd $(pwd)
 cd ${SOURCE_DIR}
 random=$(echo $$ | md5sum | md5sum)
 tmpfile="initramfs.cpio.${random:2:8}"
-find . | cpio -H newc -o > /tmp/${tmpfile}
+find . | fakeroot cpio -H newc -o > /tmp/${tmpfile}
 popd
 echo "tmpfile: ${tmpfile}"
 out_file="$(realpath ${TARGET_DIR})/$(basename ${SOURCE_DIR}).img.gz"
