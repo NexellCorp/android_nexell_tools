@@ -486,7 +486,7 @@ function apply_kernel_nand_config()
 	# DEFAULT GOVERNER CHANGE
 	sed -i 's/.*CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND.*/# CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND is not set/g' ${dst_file}
 	sed -i 's/.*CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE.*/CONFIG_CPU_FREQ_DEFAULT_GOV_INTERACTIVE=y/g' ${dst_file}
-    
+
     echo ${dst_config}
 }
 
@@ -1061,7 +1061,7 @@ function make_system()
 
     #cp ${out_dir}/system.img ${RESULT_DIR}
     make_ext4 ${BOARD_NAME} system
-		
+
     vmsg "end make_system"
 }
 
@@ -1081,7 +1081,7 @@ function make_userdata()
     vmsg "start make_userdata"
     local out_dir=$(get_out_dir)
     cp -a ${out_dir}/data ${RESULT_DIR}/userdata
-	cp ${out_dir}/userdata.img ${RESULT_DIR}
+	make_ext4 ${BOARD_NAME} userdata
 
     vmsg "end make_userdata"
 }
