@@ -427,7 +427,7 @@ function build_uboot()
         cd ${TOP}/u-boot
         make distclean
 
-        # comment out below because auto fixing muddles user 
+        # comment out below because auto fixing muddles user
         # echo "ROOT_DEVICE_TYPE is ${ROOT_DEVICE_TYPE}"
         # case ${ROOT_DEVICE_TYPE} in
         #     sd) apply_uboot_sd_root ;;
@@ -443,7 +443,7 @@ function build_uboot()
         fi
         check_result "build-uboot"
 
-        # comment out below because auto fixing muddles user 
+        # comment out below because auto fixing muddles user
         # if [ -f include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org ]; then
         #     mv include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h.org include/configs/${CHIP_NAME}_${BOARD_PURE_NAME}.h
         # fi
@@ -1132,6 +1132,7 @@ print_args
 export VERBOSE
 export ANDROID_VERSION_MAJOR=$(get_android_version_major)
 export ARM_ARCH
+clean_up
 # for device.mk get target_arch
 mkdir -p ${RESULT_DIR}
 echo -n ${ARM_ARCH} > ${RESULT_DIR}/arm_arch
@@ -1145,7 +1146,6 @@ BOARD_PURE_NAME=${BOARD_NAME#*_}
 check_board_name ${BOARD_NAME}
 check_wifi_device ${WIFI_DEVICE_NAME}
 determine_android_product
-clean_up
 build_uboot
 build_nxupdate
 build_kernel
