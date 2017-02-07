@@ -12,6 +12,7 @@ BOOT_DEVICE_TYPE=
 PARTMAP="nofile"
 UPDATE_ALL=true
 UPDATE_2NDBOOT=false
+SECURE_2NDBOOT=false
 UPDATE_UBOOT=false
 UPDATE_KERNEL=false
 UPDATE_ROOTFS=false
@@ -55,6 +56,7 @@ function usage()
     echo " -t system    : update system partition"
     echo " -t userdata  : update userdata partition"
     echo " -t cache     : update cache partition"
+    echo " -s secure    : secure boot target"
     echo " -v           : print verbose message"
 }
 
@@ -82,7 +84,7 @@ function check_target_device()
 
 function parse_args()
 {
-    TEMP=`getopt -o "d:t:hv" -- "$@"`
+    TEMP=`getopt -o "d:t:shv" -- "$@"`
     eval set -- "$TEMP"
 
     while true; do
@@ -102,6 +104,7 @@ function parse_args()
                     cache   ) UPDATE_ALL=false; UPDATE_CACHE=true ;;
                  esac
                  shift 2 ;;
+			-s ) SECURE_2NDBOOT=true; shift 1 ;;
             -h ) usage; exit 1 ;;
             -v ) VERBOSE=true; shift 1 ;;
             -- ) break ;;
@@ -220,7 +223,7 @@ function get_root_device_size()
     else
         command="capacity.nand"
     fi
-    local result_file=/tmp/size.txt 
+    local result_file=/tmp/size.txt
     echo "command : ${command}"
     sudo ${FASTBOOT} getvar ${command} 2> ${result_file}
     cat ${result_file}
@@ -370,17 +373,25 @@ function update_2ndboot()
         fi
 
         local secondboot_out_file=$RESULT_DIR/2ndboot.bin
+		local secondboot_secure_file=$RESULT_DIR/2ndboot_secure.bin
 
         vmsg "update 2ndboot: ${secondboot_file}"
 		if [ ${BOOT_DEVICE_TYPE} == "nand" ]; then
 			${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN_NAND -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p} -f 1 -r 32
 		else
 			${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
+			if [ ${SECURE_2NDBOOT} == "true" ]; then
+				sudo openssl enc -aes-128-ecb -e -K "00000000000000000000000000000000" -in ${secondboot_out_file} -out ${secondboot_secure_file}
+			fi
 		fi
         sync
         sleep 1
         echo "call fastboot"
-        flash 2ndboot ${secondboot_out_file}
+		if [ ${SECURE_2NDBOOT} == "true" ]; then
+			flash 2ndboot ${secondboot_secure_file}
+		else
+	        flash 2ndboot ${secondboot_out_file}
+		fi
         NSIH_FILE=${nsih_file}
 
         # mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
