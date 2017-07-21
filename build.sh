@@ -66,6 +66,7 @@ function usage()
     echo " -t android : if you want to build android, specify this, default yes"
     echo " -t none    : if you want to only post process, specify this, default no"
     echo " -t dist    : if you want to build distribute image, specify this, default no"
+    echo " -t nxupdate    : if you want to build nxupdate image, specify this, default no"
     echo "    -i previous_target.zip : if you want incremental OTA update, specify this, default no"
     echo "    -d 2ndboot             : if you don't want to update OTA 2ndboot, specify this, default no"
     echo "    -d u-boot              : if you don't want to update OTA u-boot, specify this, default no"
@@ -349,7 +350,6 @@ function apply_uboot_nand_root()
 
 function make_2ndboot()
 {
-    if [ ${BUILD_2NDBOOT} == "true" ] || [ ${BUILD_ALL} == "true" ]; then
         local secondboot_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/release/2ndboot
         local nsih_dir=${TOP}/linux/platform/${CHIP_NAME}/boot/release/nsih
         local secondboot_file=
@@ -397,7 +397,8 @@ function make_2ndboot()
         else
             ${TOP}/linux/platform/common/tools/bin/BOOT_BINGEN -c ${CHIP_NAME} -t 2ndboot -o ${secondboot_out_file} -i ${secondboot_file} -n ${nsih_file} ${option_p}
         fi
-    fi
+		mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
+		cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
 }
 
 function copy_partitionmap()

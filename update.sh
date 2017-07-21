@@ -383,8 +383,8 @@ function update_2ndboot()
         flash 2ndboot ${secondboot_out_file}
         NSIH_FILE=${nsih_file}
 
-        # mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
-        # cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
+        mkdir -p ${TOP}/device/nexell/${BOARD_NAME}/boot
+        cp ${secondboot_out_file} ${TOP}/device/nexell/${BOARD_NAME}/boot
     fi
 }
 
