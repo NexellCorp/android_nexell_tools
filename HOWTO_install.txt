@@ -1,0 +1,91 @@
+1. Introduction
+These files are result files built by nexell build tools.
+
+2. Files
+VERSION.txt
+	Version file that describes information about version.
+	This file also includes the last commit id, log, time about each repository
+	developed by Nexell.
+usb-downloader
+	Linux PC Tool that can download images to target board by usb interface.
+	This file used by boot_by_usb.sh so you don't need to care.
+boot_by_usb.sh
+	script that can boot target board in usb boot mode.
+update.sh
+	script that can update target board
+partmap.txt
+	partmap file that is used by u-boot to make partition at boot storage
+bl1-usbboot.bin
+	bl1 binary for usb boot
+bl1-emmcboot.bin
+	bl1 binary for emmc boot
+fip-loader-emmc.img
+	l-loader + ATF bl1 + ATF bl2 + ATF bl31 for emmc boot
+fip-loader-sd.img
+	l-loader + ATF bl1 + ATF bl2 + ATF bl31 for sd boot
+fip-loader-usb.img
+	l-loader + ATF bl1 + ATF bl2 + ATF bl31 for usb boot
+	This file used by boot_by_usb.sh
+fip-secure.img
+	OPTEE OS binary
+fip-nonsecure.img
+	u-boot(BL33) binary
+params.bin
+	u-boot env binary
+boot.img
+	boot partition image that includes kernel Image, dtbs, ramdisk
+system.img
+	Android system partition image
+userdata.img
+	Android data partition image
+cache.img
+	Android cache partition image
+
+3. How to boot when target board boot mode is usb
+Run below commands
+$ ./boot_by_usb.sh
+
+Consequently you must see like below log message in host machine
+------------------------------------------------------------
+USB Download Tool
+
+============================================================
+ Nexell USB Downloader Version 1.4.2-artik, Mar  3 2017, 15:36:32
+ Second Boot Mode
+ processor type  : slsiap
+ nsih file       : NULL
+ bin file        : NULL
+ secondboot file : bl1-usbboot.bin
+ download addr   : 0xffff0000
+ start addr      : 0xffff0000
+NSIH[17] : 26596
+=> Downloading 27108 bytes
+=> Download Success!!!
+USB Download Tool
+
+=> Image Only Mode
+=> Downloading 988552 bytes
+=> Download Success!!!
+------------------------------------------------------------
+
+And you must see like below log message in target board console
+------------------------------------------------------------
+U-Boot 2016.01-00004-gc161d6f (Mar 24 2017 - 14:02:27 +0900)
+
+DRAM:  987 MiB
+MMC:   NEXELL DWMMC: 0, NEXELL DWMMC: 1
+fail : not support lcd type 4 !!!
+In:    serial
+Out:   serial
+Err:   serial
+Hit any key to stop autoboot:  0
+------------------------------------------------------------
+
+4. update
+In target console, run below command
+# fastboot 0
+In linux PC, Run below commands to update total images
+$ ./update.sh
+If you want to update partial, Run like below commands
+$ ./update.sh {IMAGE_NAME}
+ex> # ./update.sh fip-nonsecure.img

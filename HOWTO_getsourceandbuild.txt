@@ -1,0 +1,22 @@
+1. Get Source
+$ mkdir nougat-nexell
+$ cd nougat-nexell
+$ repo init -u http://git.nexell.co.kr:8081/gerrit/nexell/android/nougat/manifest
+$ repo sync
+
+2. Build
+run ./device/nexell/{BOARD}/build.sh -s {CHIP_NAME}
+ex>
+$ ./device/nexell/avn_ref/build.sh -s s5p6818
+Build Results created in directory named result-{CHIP_NAME}-{BOARD}-{DATE}-{TIME}
+
+3. Update
+Target Board must be in fastboot mode in u-boot prompt by below command
+# fastboot 0
+
+In build machine(Host), run below command
+$ cd result-{CHIP_NAME}-{BOARD}-{DATE}-{TIME}
+$ ./update.sh
+
+If you want to update partially, add argument of image name
+$ ./update.sh system.img
