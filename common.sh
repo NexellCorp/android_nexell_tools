@@ -125,8 +125,13 @@ function get_board_name()
 function setup_toolchain()
 {
 	# android nougat internal
-	export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin:$PATH
 	export PATH=${TOP}/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin:$PATH
+
+    # arm-eabi-4.8 that is not included in android pie
+    test -d ${TOP}/device/nexell/tools/toolchain/arm-eabi-4.8 ||\
+        tar xvjf ${TOP}/device/nexell/tools/toolchain/arm-eabi-4.8.tar.bz2 -C \
+        ${TOP}/device/nexell/tools/toolchain/
+    export PATH=${TOP}/device/nexell/tools/toolchain/arm-eabi-4.8/bin:$PATH
 
 	# external
 	# arm-linux-gnueabihf for optee 32bit build
