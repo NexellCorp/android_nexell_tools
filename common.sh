@@ -491,7 +491,7 @@ function build_android()
 
 	print_build_info android
 
-	local product=PRODUCT-aosp_${2}-${3}
+	local product=PRODUCT-${2}-${3}
 	if [ "${QUICKBOOT}" == "true" ]; then
 		make ${product} TARGET_SOC=${1} MODULE=${4} QUICKBOOT=1 -j8
 	else
@@ -515,7 +515,7 @@ function build_dist()
 
 	print_build_info dist
 
-	local product=PRODUCT-aosp_${2}-${3}
+	local product=PRODUCT-${2}-${3}
 	if [ "${QUICKBOOT}" == "true" ]; then
 		make ${product} TARGET_SOC=${1} QUICKBOOT=1 dist -j8
 	else
@@ -733,7 +733,6 @@ function post_process()
 	test -f ${android_out}/recovery.img && \
 		cp ${android_out}/recovery.img ${result_dir}
 	cp ${android_out}/system.img ${result_dir}
-	cp ${android_out}/cache.img ${result_dir}
 	cp ${android_out}/userdata.img ${result_dir}
 	echo " done"
 
