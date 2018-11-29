@@ -126,6 +126,7 @@ function setup_toolchain()
 {
     # android nougat internal
     export PATH=${TOP}/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/bin:$PATH
+    export PATH=${TOP}/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin:$PATH
 
     # arm-eabi-4.8 that is not included in android pie
     test -d ${TOP}/device/nexell/tools/toolchain/arm-eabi-4.8 ||\
