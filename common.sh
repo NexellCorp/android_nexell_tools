@@ -197,6 +197,7 @@ function build_uboot_env_param()
 # $1: source location of bl1
 # $2: board name
 # $3: debug port number
+# $4: boot device name
 function build_bl1()
 {
 	[ $# -lt 3 ] && echo "" &&\
@@ -209,14 +210,18 @@ function build_bl1()
 	local src=${1}
 	local board=${2}
 	local boot_device_port=${3}
+	local boot_device_name=${4:-"emmc"}
+	local clean=${5:-"yes"}
 
 	pushd `pwd`
 	cd ${src}
-	make clean
+	if [ "${clean}" == "yes" ]; then
+		make clean
+	fi
 	if [ "${QUICKBOOT}" == "true" ]; then
-		make BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SECURE_ON=1 QUICKBOOT=1
+		make BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" BOOT_DEVICE="${boot_device_name}" SECURE_ON=1 QUICKBOOT=1
 	else
-		make BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SECURE_ON=1
+		make BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" BOOT_DEVICE="${boot_device_name}" SECURE_ON=1
 	fi
 	popd
 
@@ -669,6 +674,7 @@ function post_process()
 	if [ "${bl1_out}" != "nop" ]; then
 		echo -n "copy ${bl1_out} ..."
 		cp ${bl1_out}/bl1-emmcboot.bin ${result_dir}
+		test -f ${bl1_out}/bl1-sdboot.bin && cp ${bl1_out}/bl1-sdboot.bin ${result_dir}
 		if [ "${soc}" == "s5p4418" ]; then
 			cp ${bl1_out}/../bl1-${bl1_target_name}-usb.bin ${result_dir}/bl1-usbboot.bin
 		else
@@ -690,6 +696,8 @@ function post_process()
 
 	test -f ${android_out}/bootloader && \
 		cp ${android_out}/bootloader ${result_dir}
+	test -f ${android_out}/bootloader-sd && \
+		cp ${android_out}/bootloader-sd ${result_dir}
 	if [ -f ${android_out}/boot.img ]; then
 		cp ${android_out}/boot.img ${result_dir}
 	else
