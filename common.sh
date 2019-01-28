@@ -165,6 +165,8 @@ function print_build_done()
 # $4: (optional) splashsource
 # $5: (optional) splashoffset
 # $6: (optional) recoveryboot
+# $7: (optional) autorecovery_cmd
+# $8: (optional) env file name
 function build_uboot_env_param()
 {
 	local compiler_prefix=${1}
@@ -173,6 +175,8 @@ function build_uboot_env_param()
 	local splashsource=${4:-"nosplash"}
 	local splashoffset=${5:-"nosplash"}
 	local recoveryboot=${6:-"norecovery"}
+	local autorecovery_cmd=${7:-"none"}
+	local filename=${8:-"params.bin"}
 
 	cp `find . -name "env_common.o"` copy_env_common.o
 	${compiler_prefix}objcopy -O binary --only-section=.rodata.default_environment `find . -name "copy_env_common.o"`
@@ -188,7 +192,10 @@ function build_uboot_env_param()
 	if [ "${recoveryboot}" != "norecovery" ]; then
 		sed -i -e 's/recoveryboot=.*/recoveryboot='"${recoveryboot}"'/g' default_envs.txt
 	fi
-	tools/mkenvimage -s 16384 -o params.bin default_envs.txt
+	if [ "${autorecovery_cmd}" != "none" ]; then
+		sed -i -e 's/autorecovery_cmd=.*/autorecovery_cmd='"${autorecovery_cmd}"'/g' default_envs.txt
+	fi
+	tools/mkenvimage -s 16384 -o ${filename} default_envs.txt
 	rm copy_env_common.o default_envs*.txt
 }
 
