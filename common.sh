@@ -36,23 +36,25 @@ OTA_INCREMENTAL=false
 OTA_PREVIOUS_FILE=
 BUILD_TAG=userdebug
 QUICKBOOT=false
+ENABLE_ENC=false
 AES_KEY=none
 RSA_KEY=none
 MODULE=none
 
 function usage()
 {
-    echo "Usage: $0 -s <chip-name> [-k <aes-key-file>] [-p <rsa-key-file>] [-m <cpu-module>] [-t <build-target>] [-d <result-dir>] [-T <android-build-tag>] [-V <build-version>] [-i <previous-target.zip>] [-q]"
+    echo "Usage: $0 -s <chip-name> [-k <aes-key-file>] [-p <rsa-key-file>] [-m <cpu-module>] [-t <build-target>] [-d <result-dir>] [-T <android-build-tag>] [-V <build-version>] [-i <previous-target.zip>] [-q] [-e]"
 	echo "Available build-target: bl1, u-boot, secure, kernel, module, android, dist"
 	echo "Available android-build-tag: user userdebug eng"
 	echo "If given -d <result-dir> -V <build-version>, result-dir-build-version is created in ANDROID_TOP dir"
 	echo "-i option is for generation of incremental ota image, -t dist option is needed and previous built target_files.zip file path must follow"
 	echo "-q option is given, quickboot patch is applied"
+	echo "-e option is given, secure encryption is applied"
 }
 
 function parse_args()
 {
-	TEMP=`getopt -o "s:t:hvV:d:T:i:k:p:m:q" -- "$@"`
+	TEMP=`getopt -o "s:t:hvV:d:T:i:k:p:m:qe" -- "$@"`
 	eval set -- "$TEMP"
 
 	while true; do
@@ -79,6 +81,7 @@ function parse_args()
 			-k ) AES_KEY=$2; shift 2;;
 			-p ) RSA_KEY=$2; shift 2;;
 			-m ) MODULE=$2; shift 2;;
+			-e ) ENABLE_ENC=true; shift 1 ;;
 			-- ) break ;;
 		esac
 	done
@@ -89,7 +92,7 @@ function parse_args()
 	! test -z ${BUILD_VERSION} && RESULT_DIR=${RESULT_DIR}-${BUILD_VERSION}
 	export TARGET_SOC BOARD_NAME RESULT_DIR BUILD_BL1 BUILD_UBOOT BUILD_SECURE BUILD_KERNEL \
 		BUILD_MODULE BUILD_ANDROID BUILD_ALL VERBOSE BUILD_VERSION BUILD_DATE BUILD_TAG QUICKBOOT \
-		AES_KEY RSA_KEY MODULE
+		AES_KEY RSA_KEY MODULE ENABLE_ENC
 }
 
 function print_args()
@@ -114,6 +117,7 @@ function print_args()
 	echo "RSA_KEY ==> ${RSA_KEY}"
 	echo "CPU_MODULE ==> ${MODULE}"
 	echo "QUICKBOOT ==> ${QUICKBOOT}"
+	echo "ENABLE_ENC ==> ${ENABLE_ENC}"
 }
 
 function get_board_name()
