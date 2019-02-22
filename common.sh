@@ -422,7 +422,7 @@ function build_kernel()
     fi
 
     if [ "${QUICKBOOT}" == "true" ]; then
-        config="${soc}_${board}_nougat_quickboot_defconfig"
+        config="${soc}_${board}_pie_quickboot_defconfig"
     fi
 
     pushd `pwd`
@@ -820,7 +820,11 @@ function make_android_bootimg()
     local pagesize=${5}
     local cmdline=${6}
 
-    local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
+    [ -f ${ramdisk} ] && \
+	    local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}" \
+	    || \
+	    local args="--second ${dtb} --kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
+
     local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
 
     echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
