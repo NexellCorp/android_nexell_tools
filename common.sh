@@ -166,7 +166,7 @@ function print_build_done()
 # must be in u-boot top directory
 # args
 # $1: compiler_prefix
-# $2: bootcmd
+# $2: bootcmd array
 # $3: bootargs
 # $4: (optional) splashsource
 # $5: (optional) splashoffset
@@ -174,17 +174,33 @@ function print_build_done()
 function build_uboot_env_param()
 {
     local compiler_prefix=${1}
-    local bootcmd=${2}
+    local bootcmd=("${!2}")
     local bootargs=${3}
     local splashsource=${4:-"nosplash"}
     local splashoffset=${5:-"nosplash"}
     local recoveryboot=${6:-"norecovery"}
+    local vendor_blk_select=("${!7}")
 
     cp `find . -name "env_common.o"` copy_env_common.o
     ${compiler_prefix}objcopy -O binary --only-section=.rodata.default_environment `find . -name "copy_env_common.o"`
     tr '\0' '\n' < copy_env_common.o > default_envs.txt
-    sed -i -e 's/bootcmd=.*/bootcmd='"${bootcmd}"'/g' default_envs.txt
+
+    # for OTA A/B update
+    # sed -i -e 's/bootcmd=.*/bootcmd='"${bootcmd}"'/g' default_envs.txt
+    # sed -i -e 's/bootcmd=.*/bootcmd_a='"${bootcmd[0]}"'/g' default_envs.txt
+    echo "bootcmd_a=${bootcmd[0]}" >> default_envs.txt
+    echo "bootcmd_b=${bootcmd[1]}" >> default_envs.txt
+    echo "vendor_blk_select_a=${vendor_blk_select[0]}" >> default_envs.txt
+    echo "vendor_blk_select_b=${vendor_blk_select[1]}" >> default_envs.txt
+
+    # bootargs replace
     sed -i -e 's/bootargs=.*/bootargs='"${bootargs}"'/g' default_envs.txt
+
+    # bootargs append and override
+    # sed -i -e '/^bootargs=/ s/$/ "${bootargs}"/' default_envs.txt
+
+    sed -i -e 's/bootargs=.*/bootargs='"${bootargs}"'/g' default_envs.txt
+
     if [ "${splashsource}" != "nosplash" ]; then
         sed -i -e 's/splashsource=.*/splashsource='"${splashsource}"'/g' default_envs.txt
     fi
@@ -514,6 +530,7 @@ function build_dist()
         echo "usage: build_android target_soc target_board build_tag" &&\
         exit 0
 
+    echo " build dist"
     print_build_info dist
 
     local product=PRODUCT-${2}-${3}
@@ -740,20 +757,25 @@ function post_process()
 
     if [ "${BUILD_DIST}" == "true" ]; then
         local board_name=$(basename ${android_out})
-        cp ${TOP}/out/dist/aosp_${board_name}-target_files-eng.$(whoami).zip ${result_dir}/target_files.zip
+        echo "DIST build postprocess"
+        cp ${TOP}/out/dist/${board_name}-target_files-eng.$(whoami).zip ${result_dir}/target_files.zip
         if [ "${OTA_INCREMENTAL}" == "true" ]; then
             test -z ${OTA_PREVIOUS_FILE} && echo "No valid previous target.zip(${OTA_PREVIOUS_FILE})" || \
-                ${TOP}/build/tools/releasetools/ota_from_target_files \
+                python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
                     -i ${OTA_PREVIOUS_FILE} ${result_dir}/target_files.zip \
                     ${result_dir}/ota_update.zip
         else
-            ${TOP}/build/tools/releasetools/ota_from_target_files \
+            python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
                 ${result_dir}/target_files.zip ${result_dir}/ota_update.zip
         fi
+        echo "build dist Done"
     fi
 
     generate_update_script ${result_dir}
     generate_usb_boot ${result_dir}
+
+    # misc.img copy for OTA A/B update
+    cp ${TOP}/device/nexell/tools/misc.img ${result_dir}/.
 
     print_build_done
 }
@@ -820,14 +842,18 @@ function make_android_bootimg()
     local pagesize=${5}
     local cmdline=${6}
 
-    [ -f ${ramdisk} ] && \
-	    local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}" \
-	    || \
-	    local args="--second ${dtb} --kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
-
+    # [ -f ${ramdisk} ] && \
+    #         local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}" \
+    #         || \
+    #         local args="--second ${dtb} --kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
+    # ----------------------------------------------------------
+    # For OTA A/B update, ramdisk.img not used.
+    # ----------------------------------------------------------
+    local args="--second ${dtb} --kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
     local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
 
     echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
+
     ${mkbootimg} ${args} ${version_args} --output ${output}
 }
 
@@ -919,7 +945,9 @@ function get_blocknum_hex()
 # $4: kernel image path
 # $5: dtb image path
 # $6: ramdisk image path
-# $7: part name(ex> boot:emmc, recovery:emmc)
+# $7: part name(ex> boot_a:emmc, recovery:emmc)
+# $8: part name(ex> boot_b:emmc, recovery:emmc)
+# $9: return array bootcmd
 function make_uboot_bootcmd()
 {
     local partmap=$1
@@ -928,47 +956,82 @@ function make_uboot_bootcmd()
     local kernel=$4
     local dtb=$5
     local ramdisk=$6
-    local partname=$7
+    local partname=($7 $8)
 
-    local boot_header_size=${page_size}
-    local partition_start_offset=$(get_partition_offset ${partmap} ${partname})
-    local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
-    local kernel_size=$(get_fsize ${kernel} ${page_size})
-    local dtb_size=$(get_fsize ${dtb} ${page_size})
-    local ramdisk_size=$(get_fsize ${ramdisk} ${page_size})
-    local total_size=$((${boot_header_size} + ${kernel_size} + ${ramdisk_size} + ${dtb_size}))
-    local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
-    local ramdisk_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size})))
-    local dtb_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size})))
+    # return array
+    local -n bootcmd=$9
+    local -n vendor_blk_select=${10}
 
-    local bootcmd=
-    if [ "${TARGET_SOC}" == "s5p4418" ]; then
-        local dtb_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size}))
-        local dtb_offset_block_num_hex=$(get_blocknum_hex ${dtb_offset} 512)
-        local dtb_size_block_num_hex=$(get_blocknum_hex ${dtb_size} 512)
-        local dtb_size_hex=$(printf "%x" ${dtb_size})
-        local dtb_dest_addr=0x49000000
+    for pn in "${partname[@]}";
+    do
+        local boot_header_size=${page_size}
+        local partition_start_offset=$(get_partition_offset ${partmap} ${pn})
+        local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
+        local kernel_size=$(get_fsize ${kernel} ${page_size})
+        local dtb_size=$(get_fsize ${dtb} ${page_size})
+        local ramdisk_size=$(get_fsize ${ramdisk} ${page_size})
+        local total_size=$((${boot_header_size} + ${kernel_size} + ${ramdisk_size} + ${dtb_size}))
+        local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
+        local ramdisk_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size})))
+        local dtb_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size})))
 
-        local ramdisk_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size}))
-        local ramdisk_offset_block_num_hex=$(get_blocknum_hex ${ramdisk_offset} 512)
-        local ramdisk_size_hex=$(printf "%x" ${ramdisk_size})
-        local ramdisk_size_block_num_hex=$(get_blocknum_hex ${ramdisk_size} 512)
-        local ramdisk_dest_addr=0x48000000
+        if [ "${TARGET_SOC}" == "s5p4418" ]; then
+            local dtb_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size}))
+            local dtb_offset_block_num_hex=$(get_blocknum_hex ${dtb_offset} 512)
+            local dtb_size_block_num_hex=$(get_blocknum_hex ${dtb_size} 512)
+            local dtb_size_hex=$(printf "%x" ${dtb_size})
+            local dtb_dest_addr=0x49000000
 
-        local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
-        # echo "dtb_offset_hex --> ${dtb_offset_block_num_hex}"
-        # echo "dtb_size_hex --> ${dtb_size_block_num_hex}"
-        # echo "ramdisk_offset_block_num_hex --> ${ramdisk_offset_block_num_hex}"
-        # echo "ramdisk_size_hex --> ${ramdisk_size_block_num_hex}"
-        bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
-            cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
-            cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
-            bootz ${kernel_start_hex} ${ramdisk_dest_addr}:${ramdisk_size_hex} ${dtb_dest_addr}"
-    else
-        bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}"
-    fi
+            local ramdisk_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size}))
+            local ramdisk_offset_block_num_hex=$(get_blocknum_hex ${ramdisk_offset} 512)
+            local ramdisk_size_hex=$(printf "%x" ${ramdisk_size})
+            local ramdisk_size_block_num_hex=$(get_blocknum_hex ${ramdisk_size} 512)
+            local ramdisk_dest_addr=0x48000000
 
-    echo -n ${bootcmd}
+            local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
+
+            if [ ${pn} == "boot_a:emmc" ];then  # slot A
+              bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
+                run vendor_blk_select_a;\
+                cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
+                cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
+                bootz ${kernel_start_hex} - ${dtb_dest_addr}")
+
+              vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p6\";\
+                fdt print /firmware/android/fstab/vendor dev")
+
+              # for DEBUG
+              # vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+              #   echo \"old vendor partition in DTB\";\
+              #   fdt print /firmware/android/fstab/vendor dev;\
+              #   fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p6\";\
+              #   echo \"new vendor partition in DTB\";\
+              #   fdt print /firmware/android/fstab/vendor dev")
+            else # slot B
+              bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
+                run vendor_blk_select_b;\
+                cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
+                cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
+                bootz ${kernel_start_hex} - ${dtb_dest_addr}")
+
+              vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p7\";\
+                fdt print /firmware/android/fstab/vendor dev")
+
+              # # for DEBUG
+              # vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+              #   echo \"old vendor partition in DTB\";\
+              #   fdt print /firmware/android/fstab/vendor dev;\
+              #   fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p7\";\
+              #   echo \"new vendor partition in DTB\";\
+              #   fdt print /firmware/android/fstab/vendor dev")
+            fi
+        else
+            bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}")
+        fi
+
+    done
 }
 
 ##
@@ -1049,4 +1112,3 @@ function generate_key()
     done
     echo "End of generate_key"
 }
-
