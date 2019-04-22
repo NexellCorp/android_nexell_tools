@@ -1,0 +1,27 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "39dd61d7_1a9489a3",
+        "filename": "common.sh",
+        "patchSetId": 5
+      },
+      "lineNbr": 202,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-04-22T00:00:13Z",
+      "side": 1,
+      "message": "This is duplicated. Is there special intend?",
+      "range": {
+        "startLine": 202,
+        "startChar": 4,
+        "endLine": 202,
+        "endChar": 73
+      },
+      "revId": "46ec71d1566c3ecf227ba6b0017e224493880467",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": false
+    }
+  ]
+}
