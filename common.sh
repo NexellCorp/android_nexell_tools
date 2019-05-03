@@ -66,7 +66,7 @@ function parse_args()
                 kernel ) BUILD_ALL=false; BUILD_KERNEL=true ;;
                 module ) BUILD_ALL=false; BUILD_MODULE=true ;;
                 android ) BUILD_ALL=false; BUILD_ANDROID=true ;;
-                dist   ) BUILD_ALL=false; BUILD_DIST=true ;;
+                dist   ) BUILD_ALL=true; BUILD_ANDROID=false; BUILD_DIST=true ;;
                 none   ) BUILD_ALL=false ;;
                  esac
                  shift 2 ;;
@@ -529,6 +529,9 @@ function build_dist()
     print_build_info dist
 
     local product=PRODUCT-${2}-${3}
+
+    rm -rf ${TOP}/out/dist
+
     if [ "${QUICKBOOT}" == "true" ]; then
         make ${product} TARGET_SOC=${1} QUICKBOOT=1 dist -j8
     else
@@ -757,11 +760,13 @@ function post_process()
         if [ "${OTA_INCREMENTAL}" == "true" ]; then
             test -z ${OTA_PREVIOUS_FILE} && echo "No valid previous target.zip(${OTA_PREVIOUS_FILE})" || \
                 python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
-                    -i ${OTA_PREVIOUS_FILE} ${result_dir}/target_files.zip \
-                    ${result_dir}/ota_update.zip
+                       --full_bootloader \
+                       -i ${OTA_PREVIOUS_FILE} ${result_dir}/target_files.zip \
+                       ${result_dir}/ota_update.zip
         else
             python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
-                ${result_dir}/target_files.zip ${result_dir}/ota_update.zip
+                   --full_bootloader \
+                   ${result_dir}/target_files.zip ${result_dir}/ota_update.zip
         fi
         echo "build dist Done"
     fi
@@ -993,7 +998,7 @@ function make_uboot_bootcmd()
                 bootz ${kernel_start_hex} - ${dtb_dest_addr}")
 
               vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
-                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p6\";\
+                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p8\";\
                 fdt print /firmware/android/fstab/vendor dev")
 
               # for DEBUG
@@ -1011,7 +1016,7 @@ function make_uboot_bootcmd()
                 bootz ${kernel_start_hex} - ${dtb_dest_addr}")
 
               vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
-                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p7\";\
+                fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p9\";\
                 fdt print /firmware/android/fstab/vendor dev")
 
               # # for DEBUG
@@ -1047,24 +1052,20 @@ function make_uboot_bootcmd()
 function make_bootloader()
 {
     local total_size=${1}
-    local bl1=${2}
-    local loader_offset=${3}
-    local loader=${4}
-    local secure_offset=${5}
-    local secure=${6}
-    local nonsecure_offset=${7}
-    local nonsecure=${8}
-    local param_offset=${9}
-    local param=${10}
-    local logo_offset=${11}
-    local logo=${12}
-    local out=${13}
+    local loader=${2}
+    local secure_offset=${3}
+    local secure=${4}
+    local nonsecure_offset=${5}
+    local nonsecure=${6}
+    local param_offset=${7}
+    local param=${8}
+    local logo_offset=${9}
+    local logo=${10}
+    local out=${11}
 
     test -f ${out} && rm -f ${out}
 
     echo "total_size --> ${total_size}"
-    echo "bl1 --> ${bl1}"
-    echo "loader_offset --> ${loader_offset}"
     echo "loader --> ${loader}"
     echo "secure_offset --> ${secure_offset}"
     echo "secure --> ${secure}"
@@ -1077,13 +1078,24 @@ function make_bootloader()
     echo "out --> ${out}"
 
     local count_by_512=$((${total_size}/512))
+    echo "=========================="
+    echo ${count_by_512}
     dd if=/dev/zero of=${out} bs=512 count=${count_by_512}
-    dd if=${bl1} of=${out} bs=1
-    dd if=${loader} of=${out} seek=${loader_offset} bs=1
+    # dd if=${TOP}/device/nexell/bl1/bl1-s5p4418/out/bl1-emmcboot.bin of=${out} bs=1
+    # dd if=${loader} of=${out} seek=65536 bs=1
+    dd if=${loader} of=${out} bs=1
     dd if=${secure} of=${out} seek=${secure_offset} bs=1
     dd if=${nonsecure} of=${out} seek=${nonsecure_offset} bs=1
     dd if=${param} of=${out} seek=${param_offset} bs=1
     dd if=${logo} of=${out} seek=${logo_offset} bs=1
+
+    #Zero padding
+    out_size=`du -b "${out}" | cut -f1`
+    diffsize=$((${total_size}-${out_size}))
+    echo "${out} file size = ${out_size}"
+    echo "add zero pad ${diffsize} byte"
+    dd if=/dev/zero bs=1 count=${diffsize} >> ${out}
+
     sync
 }
 
