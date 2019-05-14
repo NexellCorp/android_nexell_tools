@@ -267,9 +267,9 @@ function build_bl1_s5p4418()
     cp ./out/bl1-${board}.bin ./bl1-${board}-usb.bin
     make clean
     if [ "${QUICKBOOT}" == "true" ]; then
-        make CHIPNAME="${chip}" BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SUPPORT_USB_BOOT="n" SUPPORT_SDMMC_BOOT="y" QUICKBOOT=1
+        make CHIPNAME="${chip}" BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SUPPORT_USB_BOOT="n" SUPPORT_SDMMC_BOOT="y" QUICKBOOT=1 OTA_AB_UPDATE=y
     else
-        make CHIPNAME="${chip}" BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SUPPORT_USB_BOOT="n" SUPPORT_SDMMC_BOOT="y"
+        make CHIPNAME="${chip}" BOARD="${board}" KERNEL_VER="4" SYSLOG="n" DEVICE_PORT="${boot_device_port}" SUPPORT_USB_BOOT="n" SUPPORT_SDMMC_BOOT="y" OTA_AB_UPDATE=y
     fi
 
     popd
@@ -294,9 +294,9 @@ function build_bl2_s5p4418()
     cd ${src}
     make clean
     if [ "${QUICKBOOT}" == "true" ]; then
-        make QUICKBOOT=1
+        make QUICKBOOT=1 SUPPORT_OTA_AB_UPDATE=y
     else
-        make
+        make SUPPORT_OTA_AB_UPDATE=y
     fi
     popd
 
