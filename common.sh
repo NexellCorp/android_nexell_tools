@@ -821,7 +821,7 @@ function gen_boot_usb_script_4418()
 
     echo "sudo ./usb-downloader -t ${soc} -b bl1-usbboot.bin -a 0xffff0000 -j 0xffff0000" >> ${result}/boot_by_usb.sh
     echo "sleep 3" >> ${result}/boot_by_usb.sh
-    echo "sudo ./usb-downloader -t ${soc}  -f fip-loader-usb.img -a ${address} -j ${address}" >> ${result}/boot_by_usb.sh
+    echo "sudo ./usb-downloader -t ${soc}  -f fip-loader-usb.img -m" >> ${result}/boot_by_usb.sh
 }
 
 ##
