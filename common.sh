@@ -166,6 +166,49 @@ function print_build_done()
 # must be in u-boot top directory
 # args
 # $1: compiler_prefix
+# $2: bootcmd
+# $3: bootargs
+# $4: (optional) splashsource
+# $5: (optional) splashoffset
+# $6: (optional) recoveryboot
+# $7: (optional) autorecovery_cmd
+# $8: (optional) env file name
+function build_uboot_env_param_legacy()
+{
+	local compiler_prefix=${1}
+	local bootcmd=${2}
+	local bootargs=${3}
+	local splashsource=${4:-"nosplash"}
+	local splashoffset=${5:-"nosplash"}
+	local recoveryboot=${6:-"norecovery"}
+	local autorecovery_cmd=${7:-"none"}
+	local filename=${8:-"params.bin"}
+
+	cp `find . -name "env_common.o"` copy_env_common.o
+	${compiler_prefix}objcopy -O binary --only-section=.rodata.default_environment `find . -name "copy_env_common.o"`
+	tr '\0' '\n' < copy_env_common.o > default_envs.txt
+	sed -i -e 's/bootcmd=.*/bootcmd='"${bootcmd}"'/g' default_envs.txt
+	sed -i -e 's/bootargs=.*/bootargs='"${bootargs}"'/g' default_envs.txt
+	if [ "${splashsource}" != "nosplash" ]; then
+		sed -i -e 's/splashsource=.*/splashsource='"${splashsource}"'/g' default_envs.txt
+	fi
+	if [ "${splashoffset}" != "nosplash" ]; then
+		sed -i -e 's/splashoffset=.*/splashoffset='"${splashoffset}"'/g' default_envs.txt
+	fi
+	if [ "${recoveryboot}" != "norecovery" ]; then
+		sed -i -e 's/recoveryboot=.*/recoveryboot='"${recoveryboot}"'/g' default_envs.txt
+	fi
+	if [ "${autorecovery_cmd}" != "none" ]; then
+		sed -i -e 's/autorecovery_cmd=.*/autorecovery_cmd='"${autorecovery_cmd}"'/g' default_envs.txt
+	fi
+	tools/mkenvimage -s 16384 -o ${filename} default_envs.txt
+	rm copy_env_common.o default_envs*.txt
+}
+
+##
+# must be in u-boot top directory
+# args
+# $1: compiler_prefix
 # $2: bootcmd array
 # $3: bootargs
 # $4: (optional) splashsource
@@ -832,6 +875,31 @@ function gen_boot_usb_script_4418()
 # $4: output image path
 # $5: page size
 # $6: kernel extra cmdline
+function make_android_bootimg_legacy()
+{
+	local mkbootimg=${TOP}/out/host/linux-x86/bin/mkbootimg
+	local kernel=${1}
+	local dtb=${2}
+	local ramdisk=${3}
+	local output=${4}
+	local pagesize=${5}
+	local cmdline=${6}
+
+	local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
+	local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
+
+	echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
+	${mkbootimg} ${args} ${version_args} --output ${output}
+}
+
+##
+# args
+# $1: kernel image path
+# $2: dtb image path
+# $3: ramdisk image path
+# $4: output image path
+# $5: page size
+# $6: kernel extra cmdline
 function make_android_bootimg()
 {
     local mkbootimg=${TOP}/out/host/linux-x86/bin/mkbootimg
@@ -945,6 +1013,66 @@ function get_blocknum_hex()
 # $4: kernel image path
 # $5: dtb image path
 # $6: ramdisk image path
+# $7: part name(ex> boot:emmc, recovery:emmc)
+function make_uboot_bootcmd_legacy()
+{
+	local partmap=$1
+	local load_addr=$2
+	local page_size=$3
+	local kernel=$4
+	local dtb=$5
+	local ramdisk=$6
+	local partname=$7
+
+	local boot_header_size=${page_size}
+	local partition_start_offset=$(get_partition_offset ${partmap} ${partname})
+	local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
+	local kernel_size=$(get_fsize ${kernel} ${page_size})
+	local dtb_size=$(get_fsize ${dtb} ${page_size})
+	local ramdisk_size=$(get_fsize ${ramdisk} ${page_size})
+	local total_size=$((${boot_header_size} + ${kernel_size} + ${ramdisk_size} + ${dtb_size}))
+	local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
+	local ramdisk_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size})))
+	local dtb_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size})))
+
+	local bootcmd=
+	if [ "${TARGET_SOC}" == "s5p4418" ]; then
+		local dtb_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size}))
+		local dtb_offset_block_num_hex=$(get_blocknum_hex ${dtb_offset} 512)
+		local dtb_size_block_num_hex=$(get_blocknum_hex ${dtb_size} 512)
+		local dtb_size_hex=$(printf "%x" ${dtb_size})
+		local dtb_dest_addr=0x49000000
+
+		local ramdisk_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size}))
+		local ramdisk_offset_block_num_hex=$(get_blocknum_hex ${ramdisk_offset} 512)
+		local ramdisk_size_hex=$(printf "%x" ${ramdisk_size})
+		local ramdisk_size_block_num_hex=$(get_blocknum_hex ${ramdisk_size} 512)
+		local ramdisk_dest_addr=0x48000000
+
+		local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
+		# echo "dtb_offset_hex --> ${dtb_offset_block_num_hex}"
+		# echo "dtb_size_hex --> ${dtb_size_block_num_hex}"
+		# echo "ramdisk_offset_block_num_hex --> ${ramdisk_offset_block_num_hex}"
+		# echo "ramdisk_size_hex --> ${ramdisk_size_block_num_hex}"
+		bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
+			cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
+			cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
+			bootz ${kernel_start_hex} ${ramdisk_dest_addr}:${ramdisk_size_hex} ${dtb_dest_addr}"
+	else
+		bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}"
+	fi
+
+	echo -n ${bootcmd}
+}
+
+##
+# args
+# $1: partmap file path
+# $2: load address(hex) of u-boot boot.img
+# $3: PAGE_SIZE
+# $4: kernel image path
+# $5: dtb image path
+# $6: ramdisk image path
 # $7: part name(ex> boot_a:emmc, recovery:emmc)
 # $8: part name(ex> boot_b:emmc, recovery:emmc)
 # $9: return array bootcmd
@@ -1032,6 +1160,64 @@ function make_uboot_bootcmd()
         fi
 
     done
+}
+
+##
+# args
+# $1: total size(must dividable by 512)
+# $2: bl1 file path
+# $3: loader offset
+# $4: loader file path
+# $5: secure offset
+# $6: secure file path
+# $7: non-secure offset
+# $8: non-secure file path
+# $9: param offset
+# $10: param file path
+# $11: logo offset
+# $12: logo file path
+# $13: outfile path
+function make_bootloader_legacy()
+{
+	local total_size=${1}
+	local bl1=${2}
+	local loader_offset=${3}
+	local loader=${4}
+	local secure_offset=${5}
+	local secure=${6}
+	local nonsecure_offset=${7}
+	local nonsecure=${8}
+	local param_offset=${9}
+	local param=${10}
+	local logo_offset=${11}
+	local logo=${12}
+	local out=${13}
+
+	test -f ${out} && rm -f ${out}
+
+	echo "total_size --> ${total_size}"
+	echo "bl1 --> ${bl1}"
+	echo "loader_offset --> ${loader_offset}"
+	echo "loader --> ${loader}"
+	echo "secure_offset --> ${secure_offset}"
+	echo "secure --> ${secure}"
+	echo "nonsecure_offset --> ${nonsecure_offset}"
+	echo "nonsecure --> ${nonsecure}"
+	echo "param_offset --> ${param_offset}"
+	echo "param --> ${param}"
+	echo "logo_offset --> ${logo_offset}"
+	echo "logo --> ${logo}"
+	echo "out --> ${out}"
+
+	local count_by_512=$((${total_size}/512))
+	dd if=/dev/zero of=${out} bs=512 count=${count_by_512}
+	dd if=${bl1} of=${out} bs=1
+	dd if=${loader} of=${out} seek=${loader_offset} bs=1
+	dd if=${secure} of=${out} seek=${secure_offset} bs=1
+	dd if=${nonsecure} of=${out} seek=${nonsecure_offset} bs=1
+	dd if=${param} of=${out} seek=${param_offset} bs=1
+	dd if=${logo} of=${out} seek=${logo_offset} bs=1
+	sync
 }
 
 ##
