@@ -910,10 +910,6 @@ function make_android_bootimg()
     local pagesize=${5}
     local cmdline=${6}
 
-    # [ -f ${ramdisk} ] && \
-    #         local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}" \
-    #         || \
-    #         local args="--second ${dtb} --kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
     # ----------------------------------------------------------
     # For OTA A/B update, ramdisk.img not used.
     # ----------------------------------------------------------
@@ -1065,8 +1061,8 @@ function make_uboot_bootcmd_legacy()
 	echo -n ${bootcmd}
 }
 
-##
-# args
+## ---------------------------------------------
+# ===   args description   ===
 # $1: partmap file path
 # $2: load address(hex) of u-boot boot.img
 # $3: PAGE_SIZE
@@ -1076,6 +1072,8 @@ function make_uboot_bootcmd_legacy()
 # $7: part name(ex> boot_a:emmc, recovery:emmc)
 # $8: part name(ex> boot_b:emmc, recovery:emmc)
 # $9: return array bootcmd
+# $10: return vendor select command
+## ---------------------------------------------
 function make_uboot_bootcmd()
 {
     local partmap=$1
@@ -1156,7 +1154,18 @@ function make_uboot_bootcmd()
               #   fdt print /firmware/android/fstab/vendor dev")
             fi
         else
-            bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}")
+            if [ ${pn} == "boot_a:emmc" ];then  # slot A
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; run vendor_blk_select_a; bootm ${load_addr} - ${dtb_start_address_hex}")
+                vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+                  fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p6\";\
+                  fdt print /firmware/android/fstab/vendor dev")
+            else # slot B
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; run vendor_blk_select_b; bootm ${load_addr} - ${dtb_start_address_hex}")
+                vendor_blk_select+=("fdt addr ${dtb_start_address_hex};\
+                  fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p7\";\
+                  fdt print /firmware/android/fstab/vendor dev")
+            fi
+            # bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}")
         fi
 
     done
@@ -1267,8 +1276,6 @@ function make_bootloader()
     echo "=========================="
     echo ${count_by_512}
     dd if=/dev/zero of=${out} bs=512 count=${count_by_512}
-    # dd if=${TOP}/device/nexell/bl1/bl1-s5p4418/out/bl1-emmcboot.bin of=${out} bs=1
-    # dd if=${loader} of=${out} seek=65536 bs=1
     dd if=${loader} of=${out} bs=1
     dd if=${secure} of=${out} seek=${secure_offset} bs=1
     dd if=${nonsecure} of=${out} seek=${nonsecure_offset} bs=1
