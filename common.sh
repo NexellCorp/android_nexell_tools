@@ -828,13 +828,12 @@ function make_android_bootimg()
 {
 	local mkbootimg=${TOP}/out/host/linux-x86/bin/mkbootimg
 	local kernel=${1}
-	local dtb=${2}
-	local ramdisk=${3}
-	local output=${4}
-	local pagesize=${5}
-	local cmdline=${6}
+	local ramdisk=${2}
+	local output=${3}
+	local pagesize=${4}
+	local cmdline=${5}
 
-	local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
+	local args="--kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
 	local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
 
 	echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
@@ -977,6 +976,40 @@ function make_uboot_bootcmd()
 	else
 		bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb_start_address_hex}"
 	fi
+
+	echo -n ${bootcmd}
+}
+##
+# args
+# $1: partmap file path
+# $2: load address(hex) of u-boot boot.img
+# $3: PAGE_SIZE
+# $4: kernel image path
+# $5: dtb load address
+# $6: ramdisk image path
+# $7: part name(ex> boot:emmc, recovery:emmc)
+function make_uboot_bootcmd_dtimg()
+{
+	local partmap=$1
+	local load_addr=$2
+	local page_size=$3
+	local kernel=$4
+	local dtb=$5
+	local ramdisk=$6
+	local partname=$7
+
+	local boot_header_size=${page_size}
+	local partition_start_offset=$(get_partition_offset ${partmap} ${partname})
+	local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
+	local kernel_size=$(get_fsize ${kernel} ${page_size})
+	local ramdisk_size=$(get_fsize ${ramdisk} ${page_size})
+	local total_size=$((${boot_header_size} + ${kernel_size} + ${ramdisk_size}))
+	local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
+	local ramdisk_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size})))
+	local dtb_start_address=$(get_partition_offset ${partmap} "dtb:emmc")
+	local dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+
+	local bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};dtimg load_mmc ${dtb_start_address_hex} ${dtb} 0; bootm ${load_addr} ${ramdisk_start_address_hex} ${dtb}"
 
 	echo -n ${bootcmd}
 }
