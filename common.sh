@@ -1122,10 +1122,12 @@ function make_uboot_bootcmd()
             local ramdisk_dest_addr=0x48000000
 
             local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
+            local var='${change_devicetree}'
 
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
               bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
                 run vendor_blk_select_a;\
+                if test !-z $var; then echo run change_devicetree; run change_devicetree; fi;\
                 cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
                 cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
                 bootz ${kernel_start_hex} - ${dtb_dest_addr}")
@@ -1144,6 +1146,7 @@ function make_uboot_bootcmd()
             else # slot B
               bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
                 run vendor_blk_select_b;\
+                if test !-z $var; then echo run change_devicetree; run change_devicetree; fi;\
                 cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
                 cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
                 bootz ${kernel_start_hex} - ${dtb_dest_addr}")
