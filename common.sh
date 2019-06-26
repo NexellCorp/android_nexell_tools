@@ -1166,13 +1166,14 @@ function make_uboot_bootcmd()
         else
             local dtb_dest_addr_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size} + 1048576)))
             local dtb_size_hex=$(printf "%x" ${dtb_size})
+            local var='${change_devicetree}'
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; cp ${dtb_start_address_hex} ${dtb_dest_addr_hex} ${dtb_size_hex}; run vendor_blk_select_a; bootm ${load_addr} - ${dtb_dest_addr_hex}")
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; cp ${dtb_start_address_hex} ${dtb_dest_addr_hex} ${dtb_size_hex}; run vendor_blk_select_a;if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_dest_addr_hex}")
                 vendor_blk_select+=("fdt addr ${dtb_dest_addr_hex};\
                   fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p8\";\
                   fdt print /firmware/android/fstab/vendor dev")
             else # slot B
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; cp ${dtb_start_address_hex} ${dtb_dest_addr_hex} ${dtb_size_hex}; run vendor_blk_select_b; bootm ${load_addr} - ${dtb_dest_addr_hex}")
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; cp ${dtb_start_address_hex} ${dtb_dest_addr_hex} ${dtb_size_hex}; run vendor_blk_select_b; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_dest_addr_hex}")
                 vendor_blk_select+=("fdt addr ${dtb_dest_addr_hex};\
                   fdt set /firmware/android/fstab/vendor dev \"/dev/block/mmcblk0p9\";\
                   fdt print /firmware/android/fstab/vendor dev")
