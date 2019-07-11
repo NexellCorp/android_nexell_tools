@@ -1,0 +1,119 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "c030aaf4_f313138d",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 501,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-11T05:44:22Z",
+      "side": 1,
+      "message": "This is differ from real argument. Please change this.",
+      "range": {
+        "startLine": 499,
+        "startChar": 0,
+        "endLine": 501,
+        "endChar": 26
+      },
+      "revId": "cb48009c7c6104ade88d2d7f488f0736216b2b0c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "60b7e049_985d346e",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 944,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-11T05:44:22Z",
+      "side": 1,
+      "message": "Please change this comment applying changed arguments.",
+      "range": {
+        "startLine": 940,
+        "startChar": 0,
+        "endLine": 944,
+        "endChar": 26
+      },
+      "revId": "cb48009c7c6104ade88d2d7f488f0736216b2b0c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "e0dfd507_dbe8617f",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 1129,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-11T05:44:22Z",
+      "side": 1,
+      "message": "Do not use tab.\nset vim like below.\n:set ts\u003d4 sw\u003d4 et",
+      "range": {
+        "startLine": 1127,
+        "startChar": 0,
+        "endLine": 1129,
+        "endChar": 30
+      },
+      "revId": "cb48009c7c6104ade88d2d7f488f0736216b2b0c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "55847870_cb757da7",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 1173,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-11T05:44:22Z",
+      "side": 1,
+      "message": "Don\u0027t use tab",
+      "range": {
+        "startLine": 1172,
+        "startChar": 0,
+        "endLine": 1173,
+        "endChar": 7
+      },
+      "revId": "cb48009c7c6104ade88d2d7f488f0736216b2b0c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    },
+    {
+      "key": {
+        "uuid": "345c18ac_c866ab71",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 1177,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-11T05:44:22Z",
+      "side": 1,
+      "message": "ditto",
+      "range": {
+        "startLine": 1176,
+        "startChar": 1,
+        "endLine": 1177,
+        "endChar": 70
+      },
+      "revId": "cb48009c7c6104ade88d2d7f488f0736216b2b0c",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
