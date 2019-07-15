@@ -1122,6 +1122,9 @@ function make_uboot_bootcmd()
     local ramdisk=$6
     local partname=($7 $8)
 
+    local kernel_start_address=0
+    local kernel_start_address_hex=0
+
     local dtb_start_address=0
     local dtb_start_address_hex=0
 
@@ -1134,35 +1137,23 @@ function make_uboot_bootcmd()
         local partition_start_offset=$(get_partition_offset ${partmap} ${pn})
         local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
         local kernel_size=$(get_fsize ${kernel} ${page_size})
-        local ramdisk_size=$(get_fsize ${ramdisk} ${page_size})
-        local total_size=$((${boot_header_size} + ${kernel_size} + ${ramdisk_size} ))
+        local total_size=$((${boot_header_size} + ${kernel_size}  ))
         local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
-        local ramdisk_start_address_hex=$(printf "%x" $((${load_addr} + ${boot_header_size} + ${kernel_size})))
 
         if [ "${TARGET_SOC}" == "s5p4418" ]; then
-            local dtb_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size} + ${ramdisk_size}))
-            local dtb_offset_block_num_hex=$(get_blocknum_hex ${dtb_offset} 512)
-            local dtb_dest_addr=0x49000000
-
-            local ramdisk_offset=$((${partition_start_offset} + ${boot_header_size} + ${kernel_size}))
-            local ramdisk_offset_block_num_hex=$(get_blocknum_hex ${ramdisk_offset} 512)
-            local ramdisk_size_hex=$(printf "%x" ${ramdisk_size})
-            local ramdisk_size_block_num_hex=$(get_blocknum_hex ${ramdisk_size} 512)
-            local ramdisk_dest_addr=0x48000000
-
-            local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
-
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
-              bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
-                cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
-                cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
-                bootz ${kernel_start_hex} - ${dtb_dest_addr}")
+                kernel_start_address=$(get_partition_offset ${partmap} "boot_a:emmc")
+                kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};bootz ${load_addr} - ${dtb_addr}")
 
             else # slot B
-              bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
-                cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
-                cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
-                bootz ${kernel_start_hex} - ${dtb_dest_addr}")
+                kernel_start_address=$(get_partition_offset ${partmap} "boot_b:emmc")
+                kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};bootz ${load_addr} - ${dtb_addr}")
             fi
         else
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
