@@ -823,6 +823,8 @@ function post_process()
     fi
     test -f ${android_out}/recovery.img && \
         cp ${android_out}/recovery.img ${result_dir}
+    test -f ${android_out}/product.img && \
+        cp ${android_out}/product.img ${result_dir}
     cp ${android_out}/system.img ${result_dir}
     cp ${android_out}/userdata.img ${result_dir}
     cp ${android_out}/vendor.img ${result_dir}
