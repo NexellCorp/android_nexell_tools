@@ -1086,11 +1086,13 @@ function make_uboot_bootcmd_legacy()
 		local ramdisk_dest_addr=0x48000000
 
 		local kernel_start_hex=$(printf "%x" $((${load_addr}+${boot_header_size})))
+		local var='${change_devicetree}'
 		# echo "dtb_offset_hex --> ${dtb_offset_block_num_hex}"
 		# echo "dtb_size_hex --> ${dtb_size_block_num_hex}"
 		# echo "ramdisk_offset_block_num_hex --> ${ramdisk_offset_block_num_hex}"
 		# echo "ramdisk_size_hex --> ${ramdisk_size_block_num_hex}"
 		bootcmd="mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex};\
+			if test !-z $var; then run change_devicetree; fi;\
 			cp ${ramdisk_start_address_hex} ${ramdisk_dest_addr} ${ramdisk_size_hex};\
 			cp ${dtb_start_address_hex} ${dtb_dest_addr} ${dtb_size_hex};\
 			bootz ${kernel_start_hex} ${ramdisk_dest_addr}:${ramdisk_size_hex} ${dtb_dest_addr}"
@@ -1141,6 +1143,7 @@ function make_uboot_bootcmd()
         local kernel_size=$(get_fsize ${kernel} ${page_size})
         local total_size=$((${boot_header_size} + ${kernel_size}  ))
         local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
+        local var='${change_devicetree}'
 
         if [ "${TARGET_SOC}" == "s5p4418" ]; then
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
@@ -1148,24 +1151,24 @@ function make_uboot_bootcmd()
                 kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};bootz ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
 
             else # slot B
                 kernel_start_address=$(get_partition_offset ${partmap} "boot_b:emmc")
                 kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};bootz ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
             fi
         else
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; bootm ${load_addr} - ${dtb_addr}")
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
             else # slot B
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; bootm ${load_addr} - ${dtb_addr}")
+                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
             fi
         fi
 
