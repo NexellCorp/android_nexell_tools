@@ -928,7 +928,7 @@ function make_android_bootimg_legacy()
 	local cmdline=${6}
 
 	local args="--second ${dtb} --kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
-	local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
+	local version_args="--os_version 9.0.0_r33 --os_patch_level 2019-02-05_4.4-p"
 
 	echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
 	${mkbootimg} ${args} ${version_args} --output ${output}
