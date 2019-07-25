@@ -217,6 +217,7 @@ function build_uboot_env_param_legacy()
 # $4: (optional) splashsource
 # $5: (optional) splashoffset
 # $6: (optional) recoveryboot
+# $7: (optional) quickrear param
 function build_uboot_env_param()
 {
     local compiler_prefix=${1}
@@ -225,7 +226,7 @@ function build_uboot_env_param()
     local splashsource=${4:-"nosplash"}
     local splashoffset=${5:-"nosplash"}
     local recoveryboot=${6:-"norecovery"}
-    local vendor_blk_select=("${!7}")
+    local nxquickrear_args=("${!7}")
 
     cp `find . -name "env_common.o"` copy_env_common.o
     ${compiler_prefix}objcopy -O binary --only-section=.rodata.default_environment `find . -name "copy_env_common.o"`
@@ -236,8 +237,8 @@ function build_uboot_env_param()
     # sed -i -e 's/bootcmd=.*/bootcmd_a='"${bootcmd[0]}"'/g' default_envs.txt
     echo "bootcmd_a=${bootcmd[0]}" >> default_envs.txt
     echo "bootcmd_b=${bootcmd[1]}" >> default_envs.txt
-    echo "vendor_blk_select_a=${vendor_blk_select[0]}" >> default_envs.txt
-    echo "vendor_blk_select_b=${vendor_blk_select[1]}" >> default_envs.txt
+    echo "nxquickrear_args_0=${nxquickrear_args[0]}" >> default_envs.txt
+    echo "nxquickrear_args_1=${nxquickrear_args[1]}" >> default_envs.txt
 
     # bootargs replace
     sed -i -e 's/bootargs=.*/bootargs='"${bootargs}"'/g' default_envs.txt
