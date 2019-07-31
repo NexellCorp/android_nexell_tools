@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "8ec575fb_3d5ad521",
+        "filename": "common.sh",
+        "patchSetId": 1
+      },
+      "lineNbr": 866,
+      "author": {
+        "id": 1015389
+      },
+      "writtenOn": "2019-07-31T07:07:03Z",
+      "side": 1,
+      "message": "I think only check file and copy the micom.bin like below\n\ntest -f ${DEVICE_DIR}/micom.bin \u0026\u0026 cp ...",
+      "revId": "733dcce674d278b331e3b082dcfda703c879a5cc",
+      "serverId": "d5d70762-12d0-45a1-890d-524b12d3f735",
+      "unresolved": true
+    }
+  ]
+}
