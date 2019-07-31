@@ -863,6 +863,9 @@ function post_process()
     # This file use to only fastboot download.
     cp ${TOP}/device/nexell/tools/misc.img ${result_dir}/.
 
+    # copy micom.bin for mcu
+    test -f ${DEVICE_DIR}/micom.bin && cp ${TOP}/device/nexell/con_svma/micom.bin ${result_dir}/.
+
     print_build_done
 }
 
