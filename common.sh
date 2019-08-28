@@ -213,20 +213,23 @@ function build_uboot_env_param_legacy()
 # args
 # $1: compiler_prefix
 # $2: bootcmd array
-# $3: bootargs
-# $4: (optional) splashsource
-# $5: (optional) splashoffset
-# $6: (optional) recoveryboot
-# $7: (optional) quickrear param
+# $3: recovery_bootcmd array
+# $4: bootargs
+# $5: (optional) splashsource
+# $6: (optional) splashoffset
+# $7: (optional) recoveryboot
+# $8: (optional) quickrear param
 function build_uboot_env_param()
 {
     local compiler_prefix=${1}
     local bootcmd=("${!2}")
-    local bootargs=${3}
-    local splashsource=${4:-"nosplash"}
-    local splashoffset=${5:-"nosplash"}
-    local recoveryboot=${6:-"norecovery"}
-    local nxquickrear_args=("${!7}")
+    local recovery_bootcmd=("${!3}")
+    local bootargs=${4}
+    local splashsource=${5:-"nosplash"}
+    local splashoffset=${6:-"nosplash"}
+    local recovery_bootargs=${7:-"norecovery"}
+    local nxquickrear_args=("${!8}")
+
 
     cp `find . -name "env_common.o"` copy_env_common.o
     ${compiler_prefix}objcopy -O binary --only-section=.rodata.default_environment `find . -name "copy_env_common.o"`
@@ -237,8 +240,11 @@ function build_uboot_env_param()
     # sed -i -e 's/bootcmd=.*/bootcmd_a='"${bootcmd[0]}"'/g' default_envs.txt
     echo "bootcmd_a=${bootcmd[0]}" >> default_envs.txt
     echo "bootcmd_b=${bootcmd[1]}" >> default_envs.txt
+    echo "recovery_bootcmd_a=${recovery_bootcmd[0]}" >> default_envs.txt
+    echo "recovery_bootcmd_b=${recovery_bootcmd[1]}" >> default_envs.txt
     echo "nxquickrear_args_0=${nxquickrear_args[0]}" >> default_envs.txt
     echo "nxquickrear_args_1=${nxquickrear_args[1]}" >> default_envs.txt
+    #sed -i -e 's/recovery_bootargs=.*/recovery_bootargs='"${recovery_bootargs}"'/g' default_envs.txt
 
     # bootargs replace
     sed -i -e 's/bootargs=.*/bootargs='"${bootargs}"'/g' default_envs.txt
@@ -249,9 +255,7 @@ function build_uboot_env_param()
     if [ "${splashoffset}" != "nosplash" ]; then
         sed -i -e 's/splashoffset=.*/splashoffset='"${splashoffset}"'/g' default_envs.txt
     fi
-    if [ "${recoveryboot}" != "norecovery" ]; then
-        sed -i -e 's/recoveryboot=.*/recoveryboot='"${recoveryboot}"'/g' default_envs.txt
-    fi
+    echo "recovery_bootargs=${recovery_bootargs}" >> default_envs.txt
     tools/mkenvimage -s 16384 -o params.bin default_envs.txt
     rm copy_env_common.o default_envs*.txt
 }
@@ -957,7 +961,7 @@ function make_android_bootimg()
     # ----------------------------------------------------------
     # For OTA A/B update, ramdisk.img not used.
     # ----------------------------------------------------------
-    local args="--kernel ${kernel} --pagesize ${pagesize} --cmdline ${cmdline}"
+    local args="--kernel ${kernel} --ramdisk ${ramdisk} --pagesize ${pagesize} --cmdline ${cmdline}"
     local version_args="--os_version 7.1.2 --os_patch_level 2017-07-05"
 
     echo "mkbootimg --> ${mkbootimg} ${args} ${version_args} --output ${output}"
@@ -1106,6 +1110,79 @@ function make_uboot_bootcmd_legacy()
 
 	echo -n ${bootcmd}
 }
+## ---------------------------------------------
+# ===   args description   ===
+# $1: partmap file path
+# $2: load address(hex) of u-boot boot.img
+# $3: PAGE_SIZE
+# $4: kernel image path
+# $5: ramdisk load address(hex)
+# $6: dtb load address(hex)
+# $7: ramdisk image path
+# $8: part name(ex> boot_a:emmc, recovery:emmc)
+# $9: part name(ex> boot_b:emmc, recovery:emmc)
+# $10: return array bootcmd
+# $11: return vendor select command
+## ---------------------------------------------
+function make_uboot_recovery_bootcmd()
+{
+    local partmap=$1
+    local load_addr=$2
+    local page_size=$3
+    local kernel=$4
+    local ramdisk_addr=$5
+    local dtb_addr=$6
+    local ramdisk=$7
+    local partname=($8 $9)
+
+    local kernel_start_address=0
+    local kernel_start_address_hex=0
+
+    local dtb_start_address=0
+    local dtb_start_address_hex=0
+
+    # return array
+    local -n recovery_bootcmd=${10}
+
+    for pn in "${partname[@]}";
+    do
+        local boot_header_size=${page_size}
+        local partition_start_offset=$(get_partition_offset ${partmap} ${pn})
+        local partition_start_block_num_hex=$(get_blocknum_hex ${partition_start_offset} 512)
+        local kernel_size=$(get_fsize ${kernel} ${page_size})
+        local total_size=$((${boot_header_size} + ${kernel_size}  ))
+        local total_size_block_num_hex=$(get_blocknum_hex ${total_size} 512)
+        local var='${change_devicetree}'
+
+        if [ "${TARGET_SOC}" == "s5p4418" ]; then
+            if [ ${pn} == "boot_a:emmc" ];then  # slot A
+                kernel_start_address=$(get_partition_offset ${partmap} "boot_a:emmc")
+                kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                recovery_bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr} ${ramdisk_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var;then run change_devicetree; fi;bootz ${load_addr} ${ramdisk_addr}:\$\{ramdisk_size\} ${dtb_addr}")
+
+            else # slot B
+                kernel_start_address=$(get_partition_offset ${partmap} "boot_b:emmc")
+                kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                recovery_bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr} ${ramdisk_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var;then run change_devicetree; fi;bootz ${load_addr} ${ramdisk_addr}:\$\{ramdisk_size\} ${dtb_addr}")
+            fi
+        else
+            if [ ${pn} == "boot_a:emmc" ];then  # slot A
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                recovery_bootcmd+=("aboot load_mmc ${partition_start_block_num_hex} ${load_addr} ${ramdisk_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; booti ${load_addr} ${ramdisk_addr}:\$\{ramdisk_size\} ${dtb_addr}")
+            else # slot B
+                dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
+                dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
+                recovery_bootcmd+=("aboot load_mmc ${partition_start_block_num_hex} ${load_addr} ${ramdisk_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; booti ${load_addr} ${ramdisk_addr}:\$\{ramdisk_size\} ${dtb_addr}")
+            fi
+        fi
+
+    done
+}
 
 ## ---------------------------------------------
 # ===   args description   ===
@@ -1155,24 +1232,24 @@ function make_uboot_bootcmd()
                 kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_zImage ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
 
             else # slot B
                 kernel_start_address=$(get_partition_offset ${partmap} "boot_b:emmc")
                 kernel_start_address_hex=$(get_blocknum_hex ${kernel_start_address} 512)
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("aboot load_mmc ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_zImage ${kernel_start_address_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\};if test !-z $var; then run change_devicetree; fi;bootz ${load_addr} - ${dtb_addr}")
             fi
         else
             if [ ${pn} == "boot_a:emmc" ];then  # slot A
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_a:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_kernel ${partition_start_block_num_hex} ${load_addr} ; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
             else # slot B
                 dtb_start_address=$(get_partition_offset ${partmap} "dtbo_b:emmc")
                 dtb_start_address_hex=$(get_blocknum_hex ${dtb_start_address} 512)
-                bootcmd+=("mmc read ${load_addr} ${partition_start_block_num_hex} ${total_size_block_num_hex}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
+                bootcmd+=("aboot load_kernel ${partition_start_block_num_hex} ${load_addr}; dtimg load_mmc ${dtb_start_address_hex} ${dtb_addr} \$\{board_rev\}; if test !-z $var; then run change_devicetree; fi; bootm ${load_addr} - ${dtb_addr}")
             fi
         fi
 
