@@ -610,12 +610,13 @@ function build_dist()
 
     local product=PRODUCT-${2}-${3}
 
-    rm -rf ${TOP}/out/dist
+    rm -rf ${TOP}/dist_output
+    mkdir ${TOP}/dist_output
 
     if [ "${QUICKBOOT}" == "true" ]; then
-        make ${product} TARGET_SOC=${1} QUICKBOOT=1 dist -j8
+        make ${product} TARGET_SOC=${1} QUICKBOOT=1 dist -j8 DIST_DIR=dist_output
     else
-        make ${product} TARGET_SOC=${1} dist -j8
+        make ${product} TARGET_SOC=${1} dist -j8 DIST_DIR=dist_output
     fi
 
     print_build_done
@@ -842,20 +843,17 @@ function post_process()
 
         # For make ota_update.zip package
         local target_files_suffix_date=`date +%Y-%m-%d-%H_%M_00`
-        cp ${TOP}/out/dist/${board_name}_auto-target_files-eng.$(whoami).zip ${result_dir}/target_files.zip
+        cp ${TOP}/dist_output/${board_name}_auto-target_files-eng.$(whoami).zip ${result_dir}/target_files.zip
         # For incremental dist build.
-        cp ${TOP}/out/dist/${board_name}_auto-target_files-eng.$(whoami).zip ${result_dir}/target_files_${target_files_suffix_date}.zip
+        cp ${TOP}/dist_output/${board_name}_auto-target_files-eng.$(whoami).zip ${result_dir}/target_files_${target_files_suffix_date}.zip
 
         if [ "${OTA_INCREMENTAL}" == "true" ]; then
             test -z ${OTA_PREVIOUS_FILE} && echo "No valid previous target.zip(${OTA_PREVIOUS_FILE})" || \
-                python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
-                       --full_bootloader \
-                       -i ${OTA_PREVIOUS_FILE} ${result_dir}/target_files.zip \
-                       ${result_dir}/ota_update.zip
+            ${TOP}/build/tools/releasetools/ota_from_target_files \
+                    -i ${OTA_PREVIOUS_FILE} ${result_dir}/target_files.zip \
+                    ${result_dir}/incremental_ota_update.zip
         else
-            python ${TOP}/build/tools/releasetools/ota_from_target_files.py \
-                   --full_bootloader \
-                   ${result_dir}/target_files.zip ${result_dir}/ota_update.zip
+            ${TOP}/build/tools/releasetools/ota_from_target_files ${result_dir}/target_files.zip ${result_dir}/ota_update.zip
         fi
         echo "build dist Done"
     fi
